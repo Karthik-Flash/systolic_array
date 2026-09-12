@@ -1,0 +1,13 @@
+# Vivado project (auto-generated)
+vivado/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+.vscode/
