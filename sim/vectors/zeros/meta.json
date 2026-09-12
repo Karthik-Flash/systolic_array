@@ -1,0 +1,11 @@
+{
+  "n": 4,
+  "k": 4,
+  "data_w": 16,
+  "acc_w": 48,
+  "out_w": 32,
+  "T": 10,
+  "seed": 1,
+  "case": "zeros",
+  "overflow": false
+}

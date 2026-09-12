@@ -11,3 +11,9 @@ venv/
 .DS_Store
 Thumbs.db
 .vscode/
+
+# Simulation byproducts (iverilog/XSim run output, not source)
+*.vcd
+*.vvp
+
+NOTE.txt
