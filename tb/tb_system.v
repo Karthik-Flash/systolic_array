@@ -1,6 +1,6 @@
 `timescale 1ns/1ps
 module tb_system;
-    parameter VEC_DIR = "D:/Projects/RC_Project/sim/vectors/counting/";
+    parameter VEC_DIR = "D:/Projects/RC_Project/sim/vectors/random/";
     localparam integer CPB = 16;
     localparam N=4, K=4, DATA_W=16, OUT_W=32;
     localparam IN_BYTES = 2*(N*K)+2*(K*N);
