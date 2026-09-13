@@ -6,7 +6,7 @@
 module tb_pe;
 
     // one-line edit to switch which generated case this checks against
-    parameter VEC_DIR = "D:/BITS Files/Year 4/RC/Project/sim/vectors/counting/";
+    parameter VEC_DIR = "D:/Projects/RC_Project/sim/vectors/counting/";
     parameter DATA_W  = 16;
     parameter ACC_W   = 48;
     parameter LEAD    = 2;
