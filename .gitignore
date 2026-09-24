@@ -15,6 +15,7 @@ Thumbs.db
 # Simulation byproducts (iverilog/XSim run output, not source)
 *.vcd
 *.vvp
+sim_trace.csv
 
 NOTE.txt
 T0_Explained_From_Scratch.md
