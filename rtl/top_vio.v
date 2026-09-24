@@ -11,9 +11,11 @@
 // -----------------------------------------------------------------------------
 module top_vio #(parameter DATA_W=16, ACC_W=48, OUT_W=32, N=4, K=4)(
     input  wire       clk,
-    input  wire       rst_n,
+    input  wire       btn_rst,     // BTNC (P16): active-HIGH push button
     output wire [7:0] led
 );
+    // internal active-low reset derived from the active-high button
+    wire rst_n = ~btn_rst;
     // ---- hardcoded counting matrices: A[i][j]=4i+j+1, B=A^T ----
     wire [N*K*DATA_W-1:0] a_bus;
     wire [K*N*DATA_W-1:0] b_bus;
