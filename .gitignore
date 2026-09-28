@@ -16,6 +16,13 @@ Thumbs.db
 *.vcd
 *.vvp
 sim_trace.csv
+sim/t1_build/
+
+# Vivado batch-mode byproducts (T1)
+vivado*.jou
+vivado*.log
+*.str
+.Xil/
 
 NOTE.txt
 T0_Explained_From_Scratch.md
