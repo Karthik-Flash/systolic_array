@@ -464,7 +464,9 @@ Run from `vivado/`: `vivado -mode batch -source ../scripts/t1/reports_t1.tcl`. R
 - Probe helpers using `get_hw_probes -of_objects [get_hw_vios -of_objects $dev]` filtered by `NAME =~ *vio_y*` etc. (robust to hierarchy prefixes). Each probe has a **fallback list of patterns** (`t1_probe_pat`; for example uptime tries `*vio_uptime*` then `*uptime_s*`), because synthesis may name a VIO input after an aliased net (`vio_uptime` is an alias of `uptime_s`; `vio_y` is driven by `U_DC`). On a miss the error lists every probe name. `t1_probes` prints them, so the real name can be added to `t1_probe_pat`. Vivado ships Tcl 8.5 (no `lmap`). Writes: set `OUTPUT_VALUE_RADIX HEX`, `OUTPUT_VALUE`, then `commit_hw_vio`. Reads: `refresh_hw_vio`, `INPUT_VALUE_RADIX HEX`, `INPUT_VALUE`.
 - `t1_swap <add|mul|grey>`: decouple=1 → program partial (timed) → decouple=0 → return ms.
 - `t1_check <add|mul|grey>`: vectors of 6.1 (grey expects y=0), `rm_id` (A1/B2/00), returns pass/fail list.
-- `t1_selftest`: as in 8.2; uptime read before and after every partial, must be non-decreasing; after a full program, record that uptime reset (expected). CSV + console table.
+- `t1_selftest`: as in 8.2; uptime read before and after every partial must advance by at least `floor(program_ms/1000)` (plain "non-decreasing" misses a reset when uptime is already ~0); after a full program, record that uptime reset (expected). CSV + console table.
+- Demo procs `t1_swap_demo <rm>` (one readable BEFORE / DECOUPLE / PROGRAM / RELEASE / AFTER block, a,b = 3,4) and `t1_full_contrast`. Session steps: `docs/T1_BOARD_RUNBOOK.md`.
+- All hardware access goes through `t1_hw_*` wrappers. `set ::T1_MOCK 1` swaps in a simulated device. `scripts/t1/hw_t1_mock.tcl` runs every proc in mock mode, including a negative run where a partial resets uptime and must FAIL.
 - Never call anything that could program the PS or touch `arm_dap_0`.
 
 ---
