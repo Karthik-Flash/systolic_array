@@ -33,6 +33,14 @@ foreach {run cfg} $cfgs {
     report_utilization -hierarchical -file $out/${cfg}_utilization_hier.rpt
     report_utilization -pblocks [get_pblocks pblock_U_RP] -file $out/${cfg}_utilization_pblock.rpt
     report_utilization -cells [get_cells U_RP] -file $out/${cfg}_utilization_U_RP.rpt
+    report_drc -file $out/${cfg}_drc.rpt
+
+    # what each global buffer drives (expect sys clk + debug hub JTAG clock)
+    foreach b [get_cells -hier -filter {REF_NAME =~ BUFG*}] {
+        set n [get_nets -of_objects [get_pins $b/O]]
+        lappend summary [format "%-9s   %s %s -> %s (%d loads)" $cfg [get_property REF_NAME $b] $b $n \
+            [llength [get_pins -leaf -of_objects $n -filter {DIRECTION == IN}]]]
+    }
 
     set wns [get_property SLACK [get_timing_paths -setup -max_paths 1 -nworst 1]]
     set whs [get_property SLACK [get_timing_paths -hold  -max_paths 1 -nworst 1]]
