@@ -1,0 +1,8 @@
+file,source_run,size_bytes,sha256,mtime
+t1_full_add.bit,impl_1/top_dfx.bit,4045667,079c009b1e1f825f2c4cd6900517098a651fd473f4ab020e7c7d6c3f53ff510e,2026-09-29T14:38:07
+t1_partial_add.bit,impl_1/U_RP_rm_add_partial.bit,585560,c443f473d28695c3aa5730afafe11720aecd9a13351b24d9293528c1bacbd8b5,2026-09-29T14:38:20
+t1_full_mul.bit,child_0_impl_1/top_dfx.bit,4045667,4b514f3378a03cec0ec45d29ee3fa6545cdd3be60ac69f718c63814f9dd90cc6,2026-09-29T14:40:40
+t1_partial_mul.bit,child_0_impl_1/U_RP_rm_mul_partial.bit,585560,6c84fc0cb61dbc9de3a46c683400c57bd076d2b64498d4cc72f4471a164abe2f,2026-09-29T14:40:54
+t1_full_grey.bit,child_1_impl_1/top_dfx.bit,4045667,6f398e83318ec5f76b3d22a6a54eca45c890ac88acefcfee395ed61c33a46815,2026-09-29T14:40:40
+t1_partial_grey.bit,child_1_impl_1/U_RP_greybox_partial.bit,585560,13e463a79dc821e58eeb699eae6f05350b62d3f5d09e8b0350687c40c5ceeef9,2026-09-29T14:40:54
+t1_full_add.ltx,impl_1/top_dfx.ltx,23903,0832fae417b08ff18d119aeba2a681e1351d3a3e9bd916f992f12e3fd67b54fb,2026-09-29T14:38:21
