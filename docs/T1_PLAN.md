@@ -194,7 +194,7 @@ module rp_t1 #(
 ```
 
 Behaviour:
-- `y` registered, reset to 0. `rm_add`: `y <= {{16{a[15]}},a} + {{16{b[15]}},b};` with `(* use_dsp = "no" *)` on the module. `rm_mul`: `y <= $signed(a) * $signed(b);` (explicit signed 32-bit product, same care as T0 `pe.v` about signedness) with `(* use_dsp = "yes" *)`.
+- `y` registered, reset to 0. `rm_add`: `y <= {{16{a[15]}},a} + {{16{b[15]}},b};` with `(* use_dsp = "no" *)` on the module. `rm_mul`: `y <= $signed(a) * $signed(b);` (explicit signed 32-bit product, same care as T0 `pe.v` about signedness) with `(* use_dsp = "yes" *)` **on the product signal `prod`, not on the module**. On the module, `use_dsp = "yes"` also pushes adders into DSPs: the prescaler incrementer took a second DSP48E1 in OOC synthesis. (Declare `prod` and `assign` it separately; Icarus rejects an attribute on a net declaration assignment.)
 - `rm_id` comes from an 8-bit register `id_q` marked `(* dont_touch = "true" *)`, reset to `8'h00`, loaded with `8'hA1` (add) / `8'hB2` (mul) every cycle out of reset. Reason: keeps every RP output pin driven by a real flop inside the RP rather than a constant (avoids constant-driven partition pins) and shows RM reset release in VIO.
 - `led_pat`: free-running `PRESCALE_W`-bit prescaler; on wrap, step the pattern. `rm_add`: `pat <= pat + 1` (reset `0000`). `rm_mul`: walking one, `pat <= {pat[2:0], pat[3]}`, reset `4'b0001`, **and** if `pat == 4'b0000` load `4'b0001` (self-heal in case the RM ever starts with all-zero state).
 
@@ -251,7 +251,7 @@ Same pins and standards as `constraints/top_vio.xdc`: `clk` Y9 LVCMOS33 + `creat
 
 ### 5.7 `constraints/top_dfx_pblock.xdc`
 
-Only a comment header: "Written by Vivado when pblock_U_RP is drawn (T1_PLAN §7.6). Implementation-only." The human sets it as the target constraint file before drawing.
+Only a comment header: "Written by Vivado when pblock_U_RP is drawn (T1_PLAN §7.8). Implementation-only." The human sets it as the target constraint file before drawing.
 
 ---
 
@@ -363,40 +363,53 @@ Result: `impl_1` implements static + `rm_add` and **locks** the static placement
 ### 7.7 Synthesize
 **Run Synthesis.** Vivado launches `synth_1` (static, with `U_RP` as a black box), `rm_add_synth_1`, `rm_mul_synth_1` (OOC), and `vio_dfx_synth_1`. When done, glance at each RM run's utilization: `rm_add` 0 DSP, `rm_mul` 1 DSP. If not, stop and report.
 
-### 7.8 Floorplan: draw `pblock_U_RP`
-1. **Open Synthesized Design.** Open the **Device** window.
-2. **Netlist** window → right-click `U_RP` → **Floorplanning → Draw Pblock** → drag a rectangle.
+### 7.8 Floorplan: `pblock_U_RP` (created by Tcl, not drawn)
+The Pblock actually used was **not** drawn by hand. It was built in the Tcl console from the device database, with the synthesized design open and `top_dfx_pblock.xdc` set as the target constraint file. Ctrl+S then wrote it into `constraints/top_dfx_pblock.xdc`.
 
-Where and how big — the rules:
-- **Full clock-region height.** The top and bottom edges of the rectangle sit exactly on the top and bottom of one clock region (the Device view outlines clock regions as `X?Y?`). On 7-series, `RESET_AFTER_RECONFIG` requires this vertical alignment.
-- **Include at least one DSP column** (the tall thin columns of DSP48 sites). One DSP column over one clock-region height = **20 DSP48E1** — enough for T2's 16 PEs, so draw the T1 Pblock at T2 size and reuse it.
-- **Width:** roughly 10 CLB columns plus that DSP column (≈ 4,000 LUTs). Far more than T1 needs, deliberately T2-sized, and it keeps partial bitstream sizes comparable between T1 and T2.
-- **Stay off the device edges** (IO columns) and away from the PS corner. A region in the right half of the die (e.g. inside `X1Y1` or `X1Y0`) is a good first choice. The exact position is not critical for T1; DRC will tell you if it's illegal.
-3. In **Pblock Properties** (select the Pblock):
-   - Name: `pblock_U_RP`
-   - General / Properties: tick **RESET_AFTER_RECONFIG**
-   - If the property **SNAPPING_MODE** is offered, set it to **ON** (it nudges edges to legal reconfigurable-frame boundaries). If it isn't offered, just keep the edges exactly on the clock-region boundary.
-   - Statistics tab: note LUT / FF / DSP / BRAM capacity for `T1_RESULTS.md`.
-4. **Ctrl+S** (save constraints) → writes into `top_dfx_pblock.xdc`. Expect content shaped like:
-   ```tcl
-   create_pblock pblock_U_RP
-   add_cells_to_pblock [get_pblocks pblock_U_RP] [get_cells -quiet [list U_RP]]
-   resize_pblock [get_pblocks pblock_U_RP] -add {SLICE_X..Y..:SLICE_X..Y..}
-   resize_pblock [get_pblocks pblock_U_RP] -add {DSP48_X..Y..:DSP48_X..Y..}
-   resize_pblock [get_pblocks pblock_U_RP] -add {RAMB18_X..Y..:RAMB18_X..Y..}   (if a BRAM column is inside)
-   set_property RESET_AFTER_RECONFIG true [get_pblocks pblock_U_RP]
-   set_property SNAPPING_MODE ON [get_pblocks pblock_U_RP]
-   ```
-   If Vivado then marks synthesis out-of-date, right-click `synth_1` → **Force Up-to-Date** (Pblock constraints don't affect synthesis).
+**Why this rectangle.** Clock region `X1Y1` (Y50–Y99) is split by the **configuration column** (BSCAN/ICAP, RPM_X 205), which occupies slice columns X68..X79. A Pblock cannot straddle it.
+- The **left part** (SLICE_X50..X67) has **no DSP column**, so it cannot host `rm_mul` or the T2 array.
+- **Both** DSP columns of X1Y1 (`DSP48_X3`, RPM_X 241, and `DSP48_X4`, RPM_X 261) lie in the **right part**. So the Pblock is SLICE_X80..X103, the right part at full clock-region height.
+- That gives **2 DSP columns × 20 = 40 DSP48E1**: T2's 16 PEs fit with 2.5× headroom, and the same Pblock serves T1 and T2.
+- Full clock-region height (Y50–Y99) satisfies `RESET_AFTER_RECONFIG` on 7-series. The rectangle stays away from the IO columns and the PS.
+
+Pblock capacity (from `report_utilization -pblocks`): **4,400 LUT (1,800 as LUTRAM) / 8,800 FF / 40 DSP / 10 BRAM tiles**.
+
+**BRAM site-type quirk.** On 7-series, BRAM sites in the same column have mixed site types (`RAMB18E1` and `RAMBFIFO18E1`, likewise for 36K). Filtering sites by `SITE_TYPE` silently misses about half of them. Select BRAM by **site-name ranges** (`RAMB18_X4Y20:RAMB18_X4Y39`) instead.
+
+Tcl (the ranges were read off the device database; the inspection queries are optional):
+```tcl
+# optional: inspect X1Y1 -- column positions via RPM_X, config column via BSCAN/ICAP sites
+foreach s [get_sites -of_objects [get_clock_regions X1Y1] -filter {NAME =~ DSP48_* || NAME =~ BSCAN_* || NAME =~ ICAP_*}] {
+    puts "$s RPM_X=[get_property RPM_X $s]"
+}
+
+create_pblock pblock_U_RP
+add_cells_to_pblock [get_pblocks pblock_U_RP] [get_cells -quiet [list U_RP]]
+resize_pblock [get_pblocks pblock_U_RP] -add {SLICE_X80Y50:SLICE_X103Y99}
+resize_pblock [get_pblocks pblock_U_RP] -add {DSP48_X3Y20:DSP48_X4Y39}
+resize_pblock [get_pblocks pblock_U_RP] -add {RAMB18_X4Y20:RAMB18_X4Y39}
+resize_pblock [get_pblocks pblock_U_RP] -add {RAMB36_X4Y10:RAMB36_X4Y19}
+set_property RESET_AFTER_RECONFIG true [get_pblocks pblock_U_RP]
+set_property SNAPPING_MODE ON [get_pblocks pblock_U_RP]
+# then Ctrl+S (save constraints) -> constraints/top_dfx_pblock.xdc
+```
+Saving also writes Vivado's `dbg_hub` settings (`C_CLK_INPUT_FREQ_HZ`, `C_ENABLE_CLK_DIVIDER`, `C_USER_SCAN_CHAIN`, `connect_debug_port dbg_hub/clk`) into the same file, because it is the target constraint file. That is expected; leave them. If Vivado then marks synthesis out-of-date, right-click `synth_1` → **Force Up-to-Date** (Pblock constraints don't affect synthesis).
 
 ### 7.9 DFX design-rule check (before implementation)
-With the synthesized design still open: **Reports → Report DRC** → in the rule deck list tick the **Dynamic Function eXchange** (a.k.a. partial reconfiguration) rules, plus defaults → OK. Require **0 errors**. Save the report (`docs/t1_reports/drc_dfx_synth.rpt`). Warnings about Pblock size or clock-region alignment are exactly what to fix now, not after routing.
+With the synthesized design still open, in the Tcl console:
+```tcl
+report_drc -file D:/Projects/RC_Project/docs/t1_reports/drc_dfx_synth.rpt
+```
+Require **0 errors**. The expected result, and the one actually obtained, is a single warning: **ZPS7-1** (PS7 block not used). That is correct for a PL-only design configured over JTAG. Any warning about Pblock size or clock-region alignment must be fixed now, not after routing.
 
 ### 7.10 Implement and generate all bitstreams
-1. Flow Navigator → **Generate Bitstream**. In a DFX project this runs `impl_1` and, depending on the dialog, the child runs too.
-2. Open the **Design Runs** tab. If `child_0_impl_1` / `child_1_impl_1` have not run: select both → right-click → **Generate Bitstream** (they wait for / reuse `impl_1`).
-3. Every run must end with WNS ≥ 0, WHS ≥ 0, write_bitstream complete. Note WNS/WHS per run from the Design Runs table.
-4. Each run folder `vivado/t1_dfx/t1_dfx.runs/<run>/` should contain `top_dfx.bit` (full) and one `*_partial.bit` (expected like `U_RP_rm_add_partial.bit`; exact prefix varies — the collector globs for it). `impl_1` also has `top_dfx.ltx` (debug probes). The greybox run's partial is the **blanking** bitstream.
+In the Tcl console (runs the parent and both children through `write_bitstream`; the children wait for and reuse `impl_1`):
+```tcl
+launch_runs impl_1 child_0_impl_1 child_1_impl_1 -to_step write_bitstream -jobs 4
+```
+1. Every run must end with WNS ≥ 0, WHS ≥ 0, write_bitstream complete. Actual: `cfg_add` +4.304 / +0.039 ns, `cfg_mul` +3.501 / +0.039 ns, `cfg_grey` +4.304 / +0.039 ns (see T1_RESULTS Table A).
+2. Each run folder `vivado/t1_dfx/t1_dfx.runs/<run>/` contains `top_dfx.bit` (full) and one `*_partial.bit`. Actual names: `U_RP_rm_add_partial.bit`, `U_RP_rm_mul_partial.bit`, `U_RP_greybox_partial.bit`. `impl_1` also has `top_dfx.ltx` (debug probes). The greybox run's partial is the **blanking** bitstream.
+3. Next to `top_dfx_routed.dcp`, the run folders also hold RM-only checkpoints (`U_RP_<rm>_routed.dcp`), and `impl_1` holds `top_dfx_routed_bb.dcp` (static only, RP as a black box). Scripts must open `top_dfx_routed.dcp` by exact name (§9.2).
 
 **Consistency rule:** if `impl_1` is ever re-run, *all* child runs and *all* partials are stale and must be regenerated. Never mix bitstreams from different static builds. `collect_bitstreams.py` refuses stale sets.
 
@@ -442,13 +455,13 @@ It programs the full `add` bitstream, then runs the swap sequence `mul → add �
 - Write `bitstreams/t1/manifest.csv`: `file, source_run, size_bytes, sha256, mtime`. Print sizes and partial/full ratio.
 
 ### 9.2 `scripts/t1/reports_t1.tcl` (Vivado batch)
-Run from `vivado/`: `vivado -mode batch -source ../scripts/t1/reports_t1.tcl`. Resolve paths from `[info script]`. For each run (glob `*_routed.dcp`): `open_checkpoint`, then write into `docs/t1_reports/<cfg>_…rpt`: `report_timing_summary`, `report_utilization`, `report_utilization -hierarchical`, `report_utilization -pblocks [get_pblocks pblock_U_RP]`, `report_utilization -cells [get_cells U_RP]`; `close_design`. Then `pr_verify -full_check -initial <impl_1 routed dcp> -additional [list <child_0> <child_1>] -file docs/t1_reports/pr_verify.rpt`. Print a one-line summary per config (WNS, WHS, total LUT/FF/DSP, U_RP LUT/FF/DSP) and the pr_verify verdict.
+Run from `vivado/`: `vivado -mode batch -source ../scripts/t1/reports_t1.tcl`. Resolve paths from `[info script]`. For each run, open **`top_dfx_routed.dcp` by exact name** (not a `*_routed.dcp` glob: run folders also hold RM-only `U_RP_<rm>_routed.dcp` checkpoints, see §7.10) with `open_checkpoint`, then write into `docs/t1_reports/<cfg>_…rpt`: `report_timing_summary`, `report_utilization`, `report_utilization -hierarchical`, `report_utilization -pblocks [get_pblocks pblock_U_RP]`, `report_utilization -cells [get_cells U_RP]`, `report_drc` (`<cfg>_drc.rpt`); list every BUFG and what it drives; `close_design`. Then `pr_verify -full_check -initial <impl_1 routed dcp> -additional [list <child_0> <child_1>] -file docs/t1_reports/pr_verify.rpt`. Print a one-line summary per config (WNS, WHS, total LUT/FF/DSP, U_RP LUT/FF/DSP) and the pr_verify verdict.
 
 ### 9.3 `scripts/t1/hw_t1.tcl` (Hardware Manager)
 - Root from `[info script]`; bitstream paths from `bitstreams/t1/`; forward slashes only.
 - `t1_connect`: `open_hw_manager` (if needed), `connect_hw_server`, `open_hw_target`, pick `[get_hw_devices xc7z020_1]`, `current_hw_device`.
 - `t1_program <bitfile>`: set `PROBES.FILE` and `FULL_PROBES.FILE` to `t1_full_add.ltx`, `PROGRAM.FILE` to the bit; time `program_hw_devices` with `clock milliseconds`; `refresh_hw_device`; return ms.
-- Probe helpers using `get_hw_probes -of_objects [get_hw_vios -of_objects $dev]` filtered by `NAME =~ *vio_y*` etc. (robust to hierarchy prefixes). Writes: set `OUTPUT_VALUE_RADIX HEX`, `OUTPUT_VALUE`, then `commit_hw_vio`. Reads: `refresh_hw_vio`, `INPUT_VALUE_RADIX HEX`, `INPUT_VALUE`.
+- Probe helpers using `get_hw_probes -of_objects [get_hw_vios -of_objects $dev]` filtered by `NAME =~ *vio_y*` etc. (robust to hierarchy prefixes). Each probe has a **fallback list of patterns** (`t1_probe_pat`; for example uptime tries `*vio_uptime*` then `*uptime_s*`), because synthesis may name a VIO input after an aliased net (`vio_uptime` is an alias of `uptime_s`; `vio_y` is driven by `U_DC`). On a miss the error lists every probe name. `t1_probes` prints them, so the real name can be added to `t1_probe_pat`. Vivado ships Tcl 8.5 (no `lmap`). Writes: set `OUTPUT_VALUE_RADIX HEX`, `OUTPUT_VALUE`, then `commit_hw_vio`. Reads: `refresh_hw_vio`, `INPUT_VALUE_RADIX HEX`, `INPUT_VALUE`.
 - `t1_swap <add|mul|grey>`: decouple=1 → program partial (timed) → decouple=0 → return ms.
 - `t1_check <add|mul|grey>`: vectors of 6.1 (grey expects y=0), `rm_id` (A1/B2/00), returns pass/fail list.
 - `t1_selftest`: as in 8.2; uptime read before and after every partial, must be non-decreasing; after a full program, record that uptime reset (expected). CSV + console table.
@@ -512,6 +525,9 @@ Note for the report: over JTAG this is **cable-bound**, so time scales with bits
 | 12 | `rm_id = 00` — greybox or reset? | Both read 00 | Check `led[6]`: on = RM held in reset; off = greybox loaded |
 | 13 | Synthesis goes out-of-date after saving the Pblock | Target XDC used in synthesis | Untick "Synthesis" on `top_dfx_pblock.xdc`, or Force Up-to-Date |
 | 14 | Paths break in Tcl | Backslashes / spaces | Forward slashes; no spaces (T0 bug #3) |
+| 15 | `synth_design` dies with `invalid command name "rt-undefined"` (seen once in batch OOC synth, on a file that had just synthesised fine) | Transient Vivado synthesis-helper fault, stale `.Xil/` state | Delete `vivado/.Xil/` and re-run; no source change needed |
+| 16 | `rm_mul` uses 2 DSP instead of 1 | `use_dsp = "yes"` on the module also maps adders (the prescaler) to DSP | Put `use_dsp` on the product signal only (§5.1) |
+| 17 | BRAM sites missing from a Pblock built by `SITE_TYPE` filter | 7-series BRAM columns mix `RAMB18E1` / `RAMBFIFO18E1` site types | Use site-name ranges (`RAMB18_X4Y20:RAMB18_X4Y39`) (§7.8) |
 
 ---
 
@@ -529,6 +545,7 @@ Note for the report: over JTAG this is **cable-bound**, so time scales with bits
 ## 13. What T1 decides for T2 (write the answers into T1_RESULTS.md at the end)
 
 1. **Pblock:** does the T2-sized `pblock_U_RP` (≥ 20 DSP, ~4k LUT, one clock-region tall) close timing and pass DRC? If yes, T2 reuses it unchanged.
+   **Answer (Phase C):** the T2 Pblock is **this one**: `SLICE_X80Y50:SLICE_X103Y99` + `DSP48_X3Y20:DSP48_X4Y39` + `RAMB18_X4Y20:RAMB18_X4Y39` + `RAMB36_X4Y10:RAMB36_X4Y19` (4,400 LUT / 8,800 FF / 40 DSP / 10 BRAM, §7.8). All three configs meet timing (worst WNS +3.501 ns), have 0 DRC errors, and pass `pr_verify`. Reuse it unchanged in T2 if the T1 on-board swap passes.
 2. **Partition boundary for T2 (to decide at T2 kickoff, informed by T1):** the natural RP is the whole 4×4 `array` (precision lives in the PEs; one RP, one Pblock; 16 separate per-PE RPs would be unmanageable). But the raw `array` interface is ~900 partition pins (`west_bus` 64 + `north_bus` 64 + `acc_bus` 768 + control). Moving the result select + `sat32` inside the RM shrinks that to ~150 (64 + 64 + `sel` 4 + `result` 32 + control). T1's partition-pin count and routing results tell us how much that matters.
 3. **Frozen interface convention:** RMs keep int16-wide ports even for int8/int4 variants; quantisation happens inside the RM so the static side never changes.
 4. **Decoupler:** `dfx_decouple` is reused with a new `W`/`SAFE`; the controller must also be prevented from starting a run while decoupled.
