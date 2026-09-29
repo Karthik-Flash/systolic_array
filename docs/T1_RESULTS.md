@@ -1,7 +1,7 @@
 # T1 Results — DFX Mechanism Proof on the ZedBoard
 
 Spec: [T1_PLAN.md](T1_PLAN.md). Board `xc7z020clg484-1`, Vivado 2022.2 project mode, PL-only, JTAG.
-Status: **Phases A–C done** (RTL + sims, tag `t1-rtl`; DFX build, bitstreams, reports, `pr_verify` PASS, tag `t1-built`). Phase D (on-board swap) pending.
+Status: **Phases A–C done** (RTL + sims, tag `t1-rtl`; DFX build, bitstreams, reports, `pr_verify` PASS, tag `t1-built`). Phase D: session 1 (full bitstream only) done; partial swaps pending (session 2, see [T1_BOARD_RUNBOOK.md](T1_BOARD_RUNBOOK.md)).
 
 T0 baseline (historical anchor, not re-measured): 16 DSP48E1, 1,335 LUT, 665 FF, 0 BRAM, WNS +0.378 ns @ 100 MHz (UART system); VIO system WNS +1.427 ns.
 
@@ -83,7 +83,7 @@ All partials are the same size, because a partial rewrites every frame of the Pb
 
 | Operation | N | ms |
 |---|---|---|
-| Full program | 3 | |
+| Full program | 3 | pending (session 1 manual, N = 1: ≈ 9,000) |
 | Partial add | 5 | |
 | Partial mul | 5 | |
 | Partial grey | 5 | |
@@ -92,14 +92,37 @@ Over JTAG this is **cable-bound**: time scales with bitstream size. It is an upp
 
 ## Table D — Functional (on silicon)
 
+**Session 1 (full only), 2026-09-29.** Only `t1_full_add.bit` + `t1_full_add.ltx` were programmed. No partial has been loaded yet.
+
+| Observation (session 1, full only) | Result |
+|---|---|
+| `vio_rm_id` after full program | **A1** |
+| a = 0003, b = 0004 → `vio_y` | **0000_0007** (correct for `rm_add`) |
+| `vio_uptime` | counting |
+| decouple = 0, rm_rst = 0 | LD3..LD0 binary counting, LD7 heartbeat |
+| decouple = 1 | LD5 + LD6 + LD7 on, LD3..LD0 dark: RM isolated and held in reset, static alive |
+| rm_rst = 1, decouple = 0 | LD6 + LD7 on: the RM reset path works on its own |
+| Full program over JTAG (`program_hw_devices`, N = 1) | ≈ 9 s |
+
+Swap results (session 2):
+
 | Check | add | mul | grey |
 |---|---|---|---|
-| §6.1 vectors pass | | | n/a (y = 0) |
-| `rm_id` | | | |
-| uptime continuous across every partial | | | |
-| heartbeat never stopped during partial load (visual) | | | |
+| §6.1 vectors pass | pending | pending | n/a (y = 0) |
+| `rm_id` | A1 (session 1, full); after partial: pending | pending | pending |
+| uptime continuous across every partial | pending | pending | pending |
+| heartbeat never stopped during partial load (visual) | pending | pending | pending |
 
-Uptime reset on full program (expected yes): 
+Uptime reset on full program (expected yes): pending (`t1_full_contrast`).
+
+"Uptime continuous" means `after − before ≥ floor(program_ms / 1000)`. At least that much wall time passes between the two reads, so a seconds counter that kept running must have advanced that far. This is stronger than "non-decreasing", which misses a reset when uptime was already near 0 (found with the mock negative test).
+
+### Predictions (written before session 2; compare against measurements)
+
+- Partial bitstream = **585,560 B = 14.5 %** of the full 4,045,667 B (Table B, measured).
+- Swap time is set by **Pblock size, not RM contents**. All three partials are the same size, so `add`, `mul` and `grey` should program in the same time within noise.
+- If the JTAG transfer dominates: partial program time ≈ **1.5–2.5 s**, vs ≈ 9 s for the full bitstream. Pure size scaling gives 9 s × 0.145 ≈ 1.3 s; the rest is the fixed per-program overhead of Hardware Manager (setup, DONE check, `refresh_hw_device` is timed separately and excluded).
+- Uptime advances by ≈ 1–3 s across each partial and drops to ≈ 0 after a full program.
 
 Self-test CSV: `docs/t1_reports/hw_selftest_<timestamp>.csv`
 
