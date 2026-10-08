@@ -1008,13 +1008,12 @@ RC_Project/
 │   ├── top.v              UART system top (simulation-verified)
 │   └── top_vio.v          VIO board top (silicon-verified)
 ├── tb/
-│   ├── tb_pe.v  tb_array.v  tb_ctrl_array.v  tb_uart_loop.v  tb_system.v
-│   └── tb_top_vio.v       (compute core of top_vio, without the VIO IP)
+│   └── tb_pe.v  tb_array.v  tb_ctrl_array.v  tb_uart_loop.v  tb_system.v
 ├── constraints/
 │   ├── top.xdc            UART system pins (UART on Pmod JA)
 │   └── top_vio.xdc        board pins for the VIO build
 ├── sim/vectors/<case>/    golden vectors: identity ones counting random extremes zeros
-├── docs/                  this guide, the handoff, notes
+├── docs/t0/               this guide (+ img/); docs/t1/ holds the T1 (DFX) guide and results
 └── vivado/                Vivado project (gitignored; regenerate from sources)
 ```
 
@@ -1026,7 +1025,7 @@ If you read only five files, read these, in this order:
 4. `rtl/array.v`: how sixteen PEs become a systolic mesh.
 5. `rtl/top_vio.v`: what actually runs on the board.
 
-Git milestones: `t0-datapath`, `t0-system`, `t0-implemented`/`t0-complete`, `t0-onboard`.
+Git milestones: `t0-datapath`, `t0-system`, `t0-onboard`.
 
 ---
 
@@ -1081,7 +1080,7 @@ Git milestones: `t0-datapath`, `t0-system`, `t0-implemented`/`t0-complete`, `t0-
 
 T0 is the verified foundation. The project's distinctive contribution starts now:
 
-- **T1: DFX mechanism.** Carve out one reconfigurable partition and swap two trivial modules at runtime over JTAG. Proves partial reconfiguration works on this board before risking the datapath.
+- **T1: DFX mechanism.** Carve out one reconfigurable partition and swap two trivial modules at runtime over JTAG. Proves partial reconfiguration works on this board before risking the datapath. **Done:** see the [T1 Complete Guide](../t1/T1_Complete_Guide.md).
 - **T2: precision variants.** The swappable module becomes the PE arithmetic in int16, int8, and int4, each verified against its own quantised golden vectors before becoming a partial bitstream.
 - **T3: runtime control and measurement.** Select precision at runtime and fill in the table below, optionally with a small MNIST network so accuracy loss is concrete.
 

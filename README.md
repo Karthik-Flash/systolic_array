@@ -1,62 +1,75 @@
 # systolic_array
 
-A systolic array accelerator project (processing element → array → control → top-level integration),
-built and verified in Verilog, targeted at Vivado for synthesis/implementation, with a Python golden
-model for verification and (eventually) MNIST inference.
-
-## Layout
-
-```
-rtl/          Verilog source: pe.v, array.v, controller.v, loader.v,
-              uart_rx.v, uart_tx.v, top.v (UART), top_vio.v (JTAG/VIO bring-up)
-tb/           Testbenches: tb_pe.v, tb_array.v, tb_ctrl_array.v,
-              tb_uart_loop.v, tb_system.v
-sim/          Test vectors (per-case dirs under sim/vectors/)
-python/       Golden model, vector generator, diff_trace.py debug tool, host.py
-constraints/  XDC pin/timing constraints (top.xdc, top_vio.xdc) for the ZedBoard
-vivado/       Vivado project (auto-generated, gitignored)
-docs/         Notes, block diagrams, screenshots for the report
-```
-
-## Build / simulate
-
-- RTL and testbenches live under `rtl/` and `tb/`; test vectors consumed by the testbenches live under `sim/vectors/`.
-- The Python golden model under `python/` generates the vectors in `sim/vectors/` and `diff_trace.py` can
-  localize the first cycle/PE where an RTL sim trace diverges from the golden one.
-- The Vivado project under `vivado/` is regenerated locally (not tracked in git) — open/create it there,
-  point it at `rtl/`, `tb/`, and the matching XDC in `constraints/`, for synthesis, implementation, and waveform viewing.
+A **precision-scalable systolic matrix multiplier** on the ZedBoard (Zynq-7000 `xc7z020clg484-1`), built for Reconfigurable Computing (CS G553, BITS Hyderabad). A 4×4 output-stationary systolic array is designed and verified in Verilog against a Python golden model. Dynamic Function eXchange (partial reconfiguration) then swaps the arithmetic at runtime, while the rest of the chip keeps running. Everything runs PL-only and is controlled over a single JTAG cable (VIO), with no ARM software.
 
 ## Status
 
-**T0 complete, in simulation and on ZedBoard silicon.**
+| Tier | What | Status | Read |
+|---|---|---|---|
+| **T0** | 4×4 int16 systolic array: datapath, controller, UART system (sim), VIO bring-up (silicon) | ✅ complete | [T0 Complete Guide](docs/t0/T0_Complete_Guide.md) |
+| **T1** | DFX mechanism proof: one reconfigurable partition, swap adder ↔ multiplier ↔ greybox over JTAG | ✅ complete on silicon | [T1 Complete Guide](docs/t1/T1_Complete_Guide.md) · [T1 Results](docs/t1/T1_RESULTS.md) |
+| T2 | Precision variants (int16 / int8 / int4 array) as reconfigurable modules in the T1 Pblock | next | — |
+| T3 | Runtime precision control and measurement (optionally MNIST) | later | — |
 
-- **Simulation:** full datapath (PE → array → controller) plus UART rx/tx, loader, saturating readout,
-  and top-level integration. End-to-end simulation (`tb_system.v`) passes bytes-in → correct-bytes-out on the
-  counting/random/extremes vector cases, overflow LED included.
-- **On board (xc7z020clg484-1):** `top_vio.v` runs a hardcoded "counting" matmul (C = A·Aᵀ) on the array,
-  driven and read back over JTAG through a Vivado VIO core (no UART, no PS). BTNC (active-high) is inverted
-  internally to the active-low `rst_n`: released = run, pressed = reset.
+Tags: `t0-datapath`, `t0-system`, `t0-onboard`, `t1-rtl`, `t1-built`, `t1-onboard`.
 
-  In the capture below, `vio_sel = 2` selects C[0][2] and `vio_result = 0x6E = 110`, which matches the
-  golden value (1·9 + 2·10 + 3·11 + 4·12), with `vio_done = 1`.
+## Headline numbers
 
-  ![T0 on-board VIO result](docs/T0_screen.png)
+**T0** (int16 array, 100 MHz; [details](docs/t0/T0_Complete_Guide.md#1-the-result-in-one-page)): 16 DSP48E1, 1,335 LUT, 665 FF (UART system), WNS +0.378 ns (UART) / +1.427 ns (VIO build). On silicon: VIO readout `C[0][2] = 110`, correct.
 
-Tags: `t0-datapath`, `t0-system`, `t0-onboard`.
+![T0 on-board VIO result](docs/t0/img/T0_screen.png)
 
-## T1 — DFX (in progress)
+**T1** (DFX; [details](docs/t1/T1_RESULTS.md)):
 
-Proves Dynamic Function eXchange (partial reconfiguration) on the ZedBoard before the datapath is put at risk:
-a static region (VIO, reset sync, uptime counter + heartbeat, decoupler) and one reconfigurable partition
-`U_RP` (`pd_t1`) that swaps between `rm_add` (a + b, 0 DSP), `rm_mul` (a × b, 1 DSP) and a greybox, loaded as
-partial bitstreams over JTAG while the static region keeps running. Plan: [docs/T1_PLAN.md](docs/T1_PLAN.md);
-results: [docs/T1_RESULTS.md](docs/T1_RESULTS.md).
+| | |
+|---|---|
+| Partial swap over JTAG | **1,424 ± 27 ms** (N = 15), vs full program 9,060 ± 73 ms (N = 3) |
+| Partial bitstream | 585,560 B = **14.5%** of the full 4,045,667 B; the same for every module |
+| Static region during swaps | uninterrupted on **15/15** swaps (uptime counter +2 s each; reset only by full programs) |
+| Timing @ 100 MHz | WNS +4.304 / +3.501 / +4.304 ns (add / mul / grey), `pr_verify` PASS |
+| Pblock (reused by T2) | right part of clock region X1Y1: 4,400 LUT, 8,800 FF, **40 DSP**, 10 BRAM |
 
-All T1 files live in `t1/` subfolders (T0 files are untouched): `rtl/t1/` (static top + `rm/` RMs),
-`tb/t1/`, `constraints/top_dfx*.xdc`, `scripts/t1/`. Vivado project: `vivado/t1_dfx/` (gitignored).
+## Repo map
 
-- Simulate: `python scripts/t1/run_sims.py` (needs iverilog; prints `ALL PASS`).
-- RM DSP sanity (OOC synth): from `vivado/`, `vivado -mode batch -source ../scripts/t1/ooc_check.tcl`.
+```
+rtl/            T0 Verilog (pe, array, controller, uart, loader, top, top_vio)
+rtl/t1/         T1 static top + reconfigurable modules (rm/rm_add.v, rm/rm_mul.v)
+tb/  tb/t1/     self-checking testbenches (T0 / T1)
+constraints/    XDC: top.xdc, top_vio.xdc (T0); top_dfx.xdc, top_dfx_pblock.xdc (T1)
+python/         golden model, quantisation helpers, vector generator, trace diff, UART host
+sim/vectors/    golden test vectors for the T0 benches
+scripts/t1/     T1 sims, OOC check, bitstream collector, reports, Hardware Manager + mock harness
+bitstreams/t1/  T1 full + partial bitstreams, probes file, manifest.csv
+docs/t0/        T0 guide (+ img/)
+docs/t1/        T1 guide, results, original plan, board runbook, reports/, img/
+vivado/         Vivado projects (gitignored; regenerate from sources)
+```
 
-Status: RTL, benches and scripts done, sims pass, OOC synth gives 0 DSP (`rm_add`) and 1 DSP (`rm_mul`) (tag `t1-rtl`).
-Next: Vivado DFX build (T1_PLAN §7), then the on-board swap test (§8).
+## Quick start
+
+Tools: Python 3 with NumPy, Icarus Verilog (`iverilog`, `vvp`), Vivado 2022.2. Paths must not contain spaces.
+
+**Python setup (once):**
+```
+py -3 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install numpy
+```
+
+**T0: golden model and vectors**
+```
+python python/test_golden.py                          # model self-checks: 14/14 PASS
+python python/gen_vectors.py --case all --seed 1      # writes sim/vectors/<case>/
+python python/gen_vectors.py --case counting --dump   # one case, with the feed staircase printed
+```
+The T0 benches (`tb/*.v`) run in XSim or Icarus against `sim/vectors/`. The Vivado flow and board bring-up are in [T0 guide §12–14](docs/t0/T0_Complete_Guide.md#12-fpgas-and-the-vivado-flow).
+
+**T1: DFX**
+```
+python scripts/t1/run_sims.py                         # 4 benches: ALL PASS
+```
+The DFX build in Vivado, bitstream collection and reports are in [T1 guide §8 and §13](docs/t1/T1_Complete_Guide.md#13-how-to-reproduce-t1-from-a-clean-clone). The committed bitstreams in `bitstreams/t1/` can be used directly. On the board (Vivado Tcl console; full steps in the [runbook](docs/t1/T1_BOARD_RUNBOOK.md)):
+```tcl
+source D:/Projects/RC_Project/scripts/t1/hw_t1.tcl
+t1_connect ; t1_program full add ; t1_swap_demo mul ; t1_selftest
+```
+Dry run without a board: from `vivado/`, `vivado -mode batch -nojournal -nolog -source ../scripts/t1/hw_t1_mock.tcl` → `MOCK TESTS PASS`.
