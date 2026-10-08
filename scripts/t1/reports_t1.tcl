@@ -2,11 +2,11 @@
 # Run from inside vivado/ (journals/logs stay in the gitignored folder):
 #   cd vivado
 #   C:/Xilinx/Vivado/2022.2/bin/vivado.bat -mode batch -source ../scripts/t1/reports_t1.tcl
-# Writes docs/t1_reports/<cfg>_*.rpt and docs/t1_reports/pr_verify.rpt.
+# Writes docs/t1/reports/<cfg>_*.rpt and docs/t1/reports/pr_verify.rpt.
 
 set root [file normalize [file join [file dirname [info script]] ../..]]
 set runs $root/vivado/t1_dfx/t1_dfx.runs
-set out  $root/docs/t1_reports
+set out  $root/docs/t1/reports
 file mkdir $out
 
 # run -> configuration (T1_PLAN §3)

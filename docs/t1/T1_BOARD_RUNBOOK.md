@@ -19,7 +19,7 @@ t1_swap_demo mul         ;# FILM THIS. Expect rm_id B2, y 0000_000C, uptime +N s
 t1_swap_demo grey        ;# rm_id 00, y 0000_0000, LD3..0 dark, LD6 off (greybox, not reset)
 t1_swap_demo add         ;# rm_id A1, y 0000_0007, LD3..0 counting again
 t1_full_contrast         ;# full program: uptime drops to ~0 (expected). This is what a partial must NOT do
-t1_selftest              ;# ~2-3 min: 3 full + 15 partial swaps, all vectors, CSV -> docs/t1_reports/
+t1_selftest              ;# ~2-3 min: 3 full + 15 partial swaps, all vectors, CSV -> docs/t1/reports/
 ```
 
 Each `t1_swap_demo` prints one block:
@@ -52,7 +52,7 @@ AFTER   : uptime 146 s   (+4 s across the swap; static NOT reset)   VERDICT: PAS
 | `t1_full_contrast` | | (~0) | | A1 | — | restarts | yes (expected) | |
 | `t1_selftest` | — | — | full / add / mul / grey mean ± sd: | — | — | — | — | PASS / FAIL |
 
-Selftest CSV file name: `docs/t1_reports/hw_selftest_________________.csv`
+Selftest CSV file name: `docs/t1/reports/hw_selftest_________________.csv`
 
 ## e. If something goes wrong
 

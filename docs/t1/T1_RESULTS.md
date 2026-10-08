@@ -37,7 +37,7 @@ Deviations from the plan made in Phase A:
 
 ## Table A — Build (per configuration)
 
-All numbers are post-route, from `docs/t1_reports/`: WNS/WHS from `<cfg>_timing_summary.rpt`, totals from `<cfg>_utilization.rpt`, U_RP from `<cfg>_utilization_U_RP.rpt`, Pblock % from `<cfg>_utilization_pblock.rpt`.
+All numbers are post-route, from `docs/t1/reports/`: WNS/WHS from `<cfg>_timing_summary.rpt`, totals from `<cfg>_utilization.rpt`, U_RP from `<cfg>_utilization_U_RP.rpt`, Pblock % from `<cfg>_utilization_pblock.rpt`.
 
 | Config | WNS (ns) | WHS (ns) | Total LUT | Total FF | Total DSP | U_RP LUT | U_RP FF | U_RP DSP | Pblock util (LUT% / DSP%) |
 |---|---|---|---|---|---|---|---|---|---|
@@ -124,7 +124,7 @@ Uptime reset on full program (expected yes): pending (`t1_full_contrast`).
 - If the JTAG transfer dominates: partial program time ≈ **1.5–2.5 s**, vs ≈ 9 s for the full bitstream. Pure size scaling gives 9 s × 0.145 ≈ 1.3 s; the rest is the fixed per-program overhead of Hardware Manager (setup, DONE check, `refresh_hw_device` is timed separately and excluded).
 - Uptime advances by ≈ 1–3 s across each partial and drops to ≈ 0 after a full program.
 
-Self-test CSV: `docs/t1_reports/hw_selftest_<timestamp>.csv`
+Self-test CSV: `docs/t1/reports/hw_selftest_<timestamp>.csv`
 
 ---
 

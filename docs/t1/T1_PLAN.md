@@ -1,5 +1,7 @@
 # T1 Plan — DFX Mechanism Proof on the ZedBoard
 
+> **Original spec, kept for the record.** T1 is complete (tag `t1-onboard`). For an explanation of what was built, read [T1_Complete_Guide.md](T1_Complete_Guide.md) first; measured numbers are in [T1_RESULTS.md](T1_RESULTS.md). Sections 7.8–7.10, 9.2–9.3, 11 and 13.1 were updated to match what was actually done; the rest is the spec as written before the build. Paths were updated when the docs moved to `docs/t1/`.
+
 **Project:** Precision-scalable systolic matrix multiplier (CS G553, BITS Hyderabad)
 **Tier:** T1 — prove Dynamic Function eXchange (partial reconfiguration) works on *this* board, with *this* toolchain, before the datapath is put at risk in T2.
 **Board / tools:** ZedBoard `xc7z020clg484-1`, Vivado 2022.2 **project mode**, Windows, repo at `D:\Projects\RC_Project\`
@@ -12,7 +14,7 @@ This file is the **single source of truth** for T1. Claude Code implements Secti
 
 ## 0. What T1 must prove (definition of done)
 
-T1 is finished when **all** of these are true and recorded in `docs/T1_RESULTS.md`:
+T1 is finished when **all** of these are true and recorded in `docs/t1/T1_RESULTS.md`:
 
 1. All simulations pass (`scripts/t1/run_sims.py` prints `ALL PASS`).
 2. Three DFX configurations (`cfg_add`, `cfg_mul`, `cfg_grey`) implement with **timing met** at 100 MHz and **`pr_verify` passes** across them.
@@ -156,10 +158,13 @@ RC_Project/
 │       ├── collect_bitstreams.py  copies/renames bits from run dirs → bitstreams/t1/, writes manifest.csv
 │       └── hw_t1.tcl          Hardware Manager procs: connect, program, swap, read VIO, t1_selftest
 ├── bitstreams/t1/             milestone bitstreams + manifest.csv (committed once at t1-onboard)
-├── docs/
-│   ├── T1_PLAN.md             this file
+├── docs/t1/
+│   ├── T1_Complete_Guide.md   the primary read: everything T1 did, explained (added at t1-onboard)
+│   ├── T1_PLAN.md             this file (original spec)
 │   ├── T1_RESULTS.md          results template → filled after hardware run
-│   └── t1_reports/            reports written by reports_t1.tcl and hw_t1.tcl (committed)
+│   ├── T1_BOARD_RUNBOOK.md    board session steps
+│   ├── img/                   Vivado screenshots
+│   └── reports/               reports written by reports_t1.tcl and hw_t1.tcl (committed)
 └── vivado/t1_dfx/             Vivado project (gitignored)
 ```
 
@@ -398,7 +403,7 @@ Saving also writes Vivado's `dbg_hub` settings (`C_CLK_INPUT_FREQ_HZ`, `C_ENABLE
 ### 7.9 DFX design-rule check (before implementation)
 With the synthesized design still open, in the Tcl console:
 ```tcl
-report_drc -file D:/Projects/RC_Project/docs/t1_reports/drc_dfx_synth.rpt
+report_drc -file D:/Projects/RC_Project/docs/t1/reports/drc_dfx_synth.rpt
 ```
 Require **0 errors**. The expected result, and the one actually obtained, is a single warning: **ZPS7-1** (PS7 block not used). That is correct for a PL-only design configured over JTAG. Any warning about Pblock size or clock-region alignment must be fixed now, not after routing.
 
@@ -442,7 +447,7 @@ In the Vivado Tcl console (Hardware Manager, target open or not):
 source D:/Projects/RC_Project/scripts/t1/hw_t1.tcl
 t1_selftest
 ```
-It programs the full `add` bitstream, then runs the swap sequence `mul → add → grey → mul → add` (decouple → program partial (timed) → release → all 6.1 vectors → rm_id check → uptime-monotonic check), repeats the full program 3× and each partial 5× for timing statistics, prints a PASS/FAIL table and writes `docs/t1_reports/hw_selftest_<timestamp>.csv`.
+It programs the full `add` bitstream, then runs the swap sequence `mul → add → grey → mul → add` (decouple → program partial (timed) → release → all 6.1 vectors → rm_id check → uptime-monotonic check), repeats the full program 3× and each partial 5× for timing statistics, prints a PASS/FAIL table and writes `docs/t1/reports/hw_selftest_<timestamp>.csv`.
 
 ---
 
@@ -455,7 +460,7 @@ It programs the full `add` bitstream, then runs the swap sequence `mul → add �
 - Write `bitstreams/t1/manifest.csv`: `file, source_run, size_bytes, sha256, mtime`. Print sizes and partial/full ratio.
 
 ### 9.2 `scripts/t1/reports_t1.tcl` (Vivado batch)
-Run from `vivado/`: `vivado -mode batch -source ../scripts/t1/reports_t1.tcl`. Resolve paths from `[info script]`. For each run, open **`top_dfx_routed.dcp` by exact name** (not a `*_routed.dcp` glob: run folders also hold RM-only `U_RP_<rm>_routed.dcp` checkpoints, see §7.10) with `open_checkpoint`, then write into `docs/t1_reports/<cfg>_…rpt`: `report_timing_summary`, `report_utilization`, `report_utilization -hierarchical`, `report_utilization -pblocks [get_pblocks pblock_U_RP]`, `report_utilization -cells [get_cells U_RP]`, `report_drc` (`<cfg>_drc.rpt`); list every BUFG and what it drives; `close_design`. Then `pr_verify -full_check -initial <impl_1 routed dcp> -additional [list <child_0> <child_1>] -file docs/t1_reports/pr_verify.rpt`. Print a one-line summary per config (WNS, WHS, total LUT/FF/DSP, U_RP LUT/FF/DSP) and the pr_verify verdict.
+Run from `vivado/`: `vivado -mode batch -source ../scripts/t1/reports_t1.tcl`. Resolve paths from `[info script]`. For each run, open **`top_dfx_routed.dcp` by exact name** (not a `*_routed.dcp` glob: run folders also hold RM-only `U_RP_<rm>_routed.dcp` checkpoints, see §7.10) with `open_checkpoint`, then write into `docs/t1/reports/<cfg>_…rpt`: `report_timing_summary`, `report_utilization`, `report_utilization -hierarchical`, `report_utilization -pblocks [get_pblocks pblock_U_RP]`, `report_utilization -cells [get_cells U_RP]`, `report_drc` (`<cfg>_drc.rpt`); list every BUFG and what it drives; `close_design`. Then `pr_verify -full_check -initial <impl_1 routed dcp> -additional [list <child_0> <child_1>] -file docs/t1/reports/pr_verify.rpt`. Print a one-line summary per config (WNS, WHS, total LUT/FF/DSP, U_RP LUT/FF/DSP) and the pr_verify verdict.
 
 ### 9.3 `scripts/t1/hw_t1.tcl` (Hardware Manager)
 - Root from `[info script]`; bitstream paths from `bitstreams/t1/`; forward slashes only.
@@ -465,13 +470,13 @@ Run from `vivado/`: `vivado -mode batch -source ../scripts/t1/reports_t1.tcl`. R
 - `t1_swap <add|mul|grey>`: decouple=1 → program partial (timed) → decouple=0 → return ms.
 - `t1_check <add|mul|grey>`: vectors of 6.1 (grey expects y=0), `rm_id` (A1/B2/00), returns pass/fail list.
 - `t1_selftest`: as in 8.2; uptime read before and after every partial must advance by at least `floor(program_ms/1000)` (plain "non-decreasing" misses a reset when uptime is already ~0); after a full program, record that uptime reset (expected). CSV + console table.
-- Demo procs `t1_swap_demo <rm>` (one readable BEFORE / DECOUPLE / PROGRAM / RELEASE / AFTER block, a,b = 3,4) and `t1_full_contrast`. Session steps: `docs/T1_BOARD_RUNBOOK.md`.
+- Demo procs `t1_swap_demo <rm>` (one readable BEFORE / DECOUPLE / PROGRAM / RELEASE / AFTER block, a,b = 3,4) and `t1_full_contrast`. Session steps: `docs/t1/T1_BOARD_RUNBOOK.md`.
 - All hardware access goes through `t1_hw_*` wrappers. `set ::T1_MOCK 1` swaps in a simulated device. `scripts/t1/hw_t1_mock.tcl` runs every proc in mock mode, including a negative run where a partial resets uptime and must FAIL.
 - Never call anything that could program the PS or touch `arm_dap_0`.
 
 ---
 
-## 10. Measurements for `docs/T1_RESULTS.md`
+## 10. Measurements for `docs/t1/T1_RESULTS.md`
 
 Claude Code creates the template in Phase A and fills it in Phases C/D.
 
@@ -539,7 +544,7 @@ Note for the report: over JTAG this is **cable-bound**, so time scales with bits
 |---|---|---|---|
 | A. RTL + benches + scripts + results template | Claude Code | sims `ALL PASS`, optional OOC DSP check | `t1-rtl` |
 | B. Vivado DFX project, Pblock, DRC, bitstreams | Human (GUI, §7) | 3 configs routed, bitstreams present | — |
-| C. Collect bitstreams, reports, pr_verify, fill Table A/B | Claude Code | `bitstreams/t1/`, `docs/t1_reports/`, `pr_verify` PASS | `t1-built` |
+| C. Collect bitstreams, reports, pr_verify, fill Table A/B | Claude Code | `bitstreams/t1/`, `docs/t1/reports/`, `pr_verify` PASS | `t1-built` |
 | D. On-board swap + `t1_selftest`, fill Table C/D, photos | Human + Claude Code | `hw_selftest_*.csv`, results complete | `t1-onboard` |
 
 ---
@@ -559,7 +564,7 @@ Note for the report: over JTAG this is **cable-bound**, so time scales with bits
 
 ```text
 You are implementing T1 (DFX mechanism proof) of the systolic_array project.
-The spec is docs/T1_PLAN.md — read it completely first; it is authoritative. Also read
+The spec is docs/t1/T1_PLAN.md — read it completely first; it is authoritative. Also read
 rtl/top_vio.v, rtl/pe.v and constraints/top_vio.xdc to match T0 style, VIO instantiation
 and pin constraints.
 
@@ -594,9 +599,9 @@ TASKS
 7. Write (do not run — they need the built project / the board):
    scripts/t1/collect_bitstreams.py (§9.1), scripts/t1/reports_t1.tcl (§9.2),
    scripts/t1/hw_t1.tcl (§9.3). Python must at least pass `python -m py_compile`.
-8. Create docs/T1_RESULTS.md from §10 (empty tables, plus a "T2 decisions" section from §13).
+8. Create docs/t1/T1_RESULTS.md from §10 (empty tables, plus a "T2 decisions" section from §13).
 9. Update .gitignore per §4. Update README.md with a short "T1 — DFX (in progress)" section
-   linking docs/T1_PLAN.md.
+   linking docs/t1/T1_PLAN.md.
 10. Show me: the new tree (only T1 paths), run_sims.py output, OOC numbers if any, and
     `git status`. Then commit in logical commits (rtl / tb+sims / scripts / docs) and tag
     `t1-rtl`. Do NOT push until I say so.
@@ -609,23 +614,23 @@ and propose the fix instead of silently deviating.
 
 ```text
 Phase B is done: vivado/t1_dfx has impl_1 (cfg_add), child_0_impl_1 (cfg_mul) and
-child_1_impl_1 (cfg_grey) all through write_bitstream. Per docs/T1_PLAN.md:
+child_1_impl_1 (cfg_grey) all through write_bitstream. Per docs/t1/T1_PLAN.md:
 1. Run scripts/t1/collect_bitstreams.py. Show the manifest and partial/full size ratios.
 2. From inside vivado/, run `vivado -mode batch -source ../scripts/t1/reports_t1.tcl`.
    Show per-config WNS/WHS, total and U_RP LUT/FF/DSP, Pblock utilization, and the
    pr_verify verdict. If pr_verify fails, stop and explain.
-3. Fill Tables A and B of docs/T1_RESULTS.md from the reports (cite the report file for each
+3. Fill Tables A and B of docs/t1/T1_RESULTS.md from the reports (cite the report file for each
    number). Record the Pblock ranges from constraints/top_dfx_pblock.xdc.
-4. Commit docs/t1_reports/, bitstreams/t1/, constraints/top_dfx_pblock.xdc, results; tag
+4. Commit docs/t1/reports/, bitstreams/t1/, constraints/top_dfx_pblock.xdc, results; tag
    `t1-built`. Do not push until I say so.
 ```
 
 ## Appendix C — Claude Code prompt, Phase D (after the board run)
 
 ```text
-I ran t1_selftest on the board; the CSV is in docs/t1_reports/. Also my manual observations:
+I ran t1_selftest on the board; the CSV is in docs/t1/reports/. Also my manual observations:
 <paste: heartbeat never stopped? uptime before/after swap values, photos taken>.
-Fill Tables C and D of docs/T1_RESULTS.md (mean ± sd), write the "What T1 decides for T2"
+Fill Tables C and D of docs/t1/T1_RESULTS.md (mean ± sd), write the "What T1 decides for T2"
 answers (§13) from the build + board evidence, update README (T1 complete), commit, tag
 `t1-onboard`, and push branch + tags after showing me the final diff summary.
 ```

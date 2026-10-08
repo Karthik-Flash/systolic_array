@@ -14,7 +14,7 @@
 set t1_root    [file normalize [file join [file dirname [info script]] ../..]]
 set t1_bits    $t1_root/bitstreams/t1
 set t1_ltx     $t1_bits/t1_full_add.ltx
-set t1_reports $t1_root/docs/t1_reports
+set t1_reports $t1_root/docs/t1/reports
 if {![info exists ::T1_MOCK]} { set ::T1_MOCK 0 }
 
 # VIO probe name patterns, tried in order (robust to hierarchy prefixes).
@@ -336,10 +336,10 @@ proc t1_selftest {} {
     # leave the board in the reference configuration
     t1_swap add
 
-    # ---- CSV (mock runs go to the gitignored vivado/ folder, never docs/) ----
+    # ---- CSV (mock runs go to the gitignored sim/t1_build/mock/, never docs/) ----
     set ts [clock format [clock seconds] -format %Y%m%d_%H%M%S]
     if {$::T1_MOCK} {
-        set dir $::t1_root/vivado/t1_mock
+        set dir $::t1_root/sim/t1_build/mock
         set csv $dir/hw_selftest_MOCK_${ts}_[clock clicks].csv
     } else {
         set dir $::t1_reports
