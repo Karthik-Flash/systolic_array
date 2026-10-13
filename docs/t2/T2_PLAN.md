@@ -56,7 +56,7 @@ Rules carried from T0/T1: never invent numbers; rehearse every board script in m
 **T2 is done when all of these hold:**
 
 1. `python python/test_golden_t2.py` → ALL PASS; vectors for 3 precisions × 9 cases exist under `sim/t2_vectors/`.
-2. `python scripts/t2/run_sims.py` → **ALL PASS** (6 positive builds) and **NEGATIVE OK** (3 negative builds fail as required); the three RM port lists are identical.
+2. `python scripts/t2/run_sims.py` → **ALL PASS** (6 positive builds, run in XSim; see §16 #1) and **NEGATIVE OK** (3 negative builds fail as required); the three RM port lists are identical.
 3. `scripts/t2/ooc_check.tcl` → **OOC PASS** (gates in §8.3).
 4. `scripts/t2/create_project_t2.tcl` validated in a scratch project, including synthesis of the static design and all three RMs → **SCRATCH OK**.
 5. Four configurations routed to bitstream; each has WNS ≥ 0, WHS ≥ 0 and 0 DRC errors; `pr_verify` PASS across all four.
@@ -304,7 +304,7 @@ Delete only if the path is untracked or gitignored (`git ls-files` / `git check-
 
 ### 6.1 Coding rules (all T2 RTL)
 
-- Verilog-2001; must pass `iverilog -g2005` with 0 warnings. No SystemVerilog.
+- Verilog-2001; must compile and elaborate with 0 warnings in XSim 2022.2 (`xvlog` / `xelab`). Every build that does not include T0's `rtl/array.v` must also lint clean with the installed Icarus 0.9.7 (`iverilog -g2005 -Wall`), so T2 files avoid 2-D net arrays (§16 #1). No SystemVerilog.
 - Synchronous, active-low resets (`rst_n`) with a defined reset value on every register.
 - Signed arithmetic: every operand in a signed expression is signed; zero constants in `?:` are `$signed({W{1'b0}})` (T0 bug #1).
 - Attributes on nets: declare the net, then `assign` (Icarus limitation, T1 bug #2). Module-level `(* use_dsp = "no" *)` on `pe_lut` is allowed and intended.
@@ -355,6 +355,8 @@ assign led       = {heartbeat, ~rm_rst_n, vio_decouple, done_flag, led_s};
 ```
 
 If `controller.v`'s `done` is a level (Moore `DONE` state), `done_rise` still fires once per run because the controller leaves `DONE` on the next start. Claude Code confirms the controller's actual ports and `done` behaviour and logs them in §16.
+
+**Confirmed (§16 #2):** `controller` ports are `clk, rst_n, start, a_bus[255:0], b_bus[255:0]` in and `clr_acc, west_bus[63:0], north_bus[63:0], running, done` out; `clr_acc`, the buses, `running` and `done` are combinational from the state (`done` = level, state `DONE`). `running` is wired to an unused net `ct_running`. Reused T1 modules: `rst_sync (clk, btn_rst, rst_n)`, `uptime #(TICK_DIV) (clk, rst_n, seconds[31:0], heartbeat)`, `dfx_decouple #(W, SAFE) (clk, rst_n, decouple, rp_out, safe_out)`. Measured in `tb_top_t2`: start_ok → ct_done = 12 cycles, start_ok → done_flag = 15 cycles, for every case and RM (`docs/t2/reports/sim_cycles.csv`).
 
 ### 6.3 `rp_t2` — the frozen RP port list (byte-identical in all three RM files)
 
@@ -432,6 +434,8 @@ module rm_badge #(parameter [7:0] ID = 8'h00, parameter [3:0] PAT = 4'b0000, par
 
 `sat32` is re-implemented in `rm_readout` with exactly T0 `loader.v`'s semantics (clamp to `7FFFFFFF` / `80000000`); `loader.v` itself is not instantiated.
 
+As built (§16 #6, #7): `rm_readout` and `rm_badge` declare their outputs `output wire`, each driven by an internal register; the `dont_touch` attribute sits on those registers (`ovf_q`, `id_q`, `pat_q`), as T1 did. `pat_q` is `dont_touch` too, because the badge bits that are 0 in PAT (int8 `[3:2]`, int4 `[3:1]`) would otherwise be constant-driven partition pins. `array_lut` uses two flat interconnect buses (`a_h`, `b_v`) instead of T0's 2-D net arrays; the geometry, hop latency and `acc_bus` layout are unchanged.
+
 ### 6.6 Checklist every RM must satisfy
 
 1. Module name `rp_t2`; port list byte-identical to §6.3 (`run_sims.py` diffs the three files' port declarations).
@@ -459,6 +463,8 @@ For precision W ∈ {16, 8, 4} with ACC_W = 48 / 18 / 10:
 4. `c_out = sat32(C)`; `ovf = (c_out != C)` per element. Only int16 can overflow.
 
 `golden_t2.py` reuses `quant.py` and `golden.py` (imports only; they are frozen). If `quant.saturate` / `clip_to_width` match `clamp_full` on a sweep, use them; if not (for example a symmetric ±127 clip), `golden_t2.py` uses its own `clamp_full` and the difference is logged in §16.
+
+**Confirmed (§16 #3):** `quant.saturate` / `clip_to_width` clamp to the full two's-complement range (`LIMITS` table); `clamp_full` is `quant.clip_to_width`, and `test_golden_t2.py` checks it against `min(max(x, lo), hi)` over all 65,536 int16 values at W = 8 and 4. `quant.to_hex` uses `bits // 4` digits, which is too short for 10- and 18-bit values, so `golden_t2.to_hex` uses ceil(bits / 4).
 
 ### 7.2 Files
 
@@ -491,6 +497,8 @@ For precision W ∈ {16, 8, 4} with ACC_W = 48 / 18 / 10:
 | `c_out.hex` | 16 lines, 8 hex digits (int32 after `sat32`) |
 | `ovf.hex` | 16 lines, `0` / `1` |
 | `meta.json` | prec, W, ACC_W, rm_id, case, seed, any_ovf, n_clamped_inputs |
+
+All hex digits are lowercase (as in T0's `sim/vectors/`); board scripts compare hex case-insensitively (§16 #4).
 
 ### 7.5 Hand-checkable expectations (computed independently by the planner with numpy; the generated files are authoritative and A1 must confirm them)
 
@@ -532,21 +540,23 @@ For precision W ∈ {16, 8, 4} with ACC_W = 48 / 18 / 10:
 6. release: `rm_id` returns, `done_flag` stays 0 until a new run; re-run gives correct results and clears `blocked`;
 7. heartbeat half-period = `TICK_DIV/2`; LD4 = `done_flag`; LD3..0 show the badge.
 
-`vio_t2_stub.v` has the IP's exact port names (`clk`, `probe_in0..4`, `probe_out0..5`); the bench drives its outputs hierarchically. Compile with `iverilog -g2005 -s <bench>` so unused modules in `rm_common.v` are not elaborated as extra roots.
+`vio_t2_stub.v` has the IP's exact port names (`clk`, `probe_in0..4`, `probe_out0..5`); the bench drives its outputs hierarchically. Benches run in XSim (`xvlog -d PREC_x` → `xelab <bench>` → `xsim -R`, §16 #1) with the working directory `sim/t2_build/<build>/`; vector paths are relative to it (`../../t2_vectors/<prec>/<case>/`). Only the named bench top is elaborated, so unused modules in `rm_common.v` are no extra roots; the Icarus lint uses `-s <bench>` for the same reason. `tb_top_t2` changes `vio_start` 1 ns after a clock edge and stamps `start_ok`, `ct_done` and `done_flag` at the falling edge, so the cycle counts are race-free.
 
 ### 8.2 `scripts/t2/run_sims.py`
 
-- Positive builds: `tb_rp_t2` × 3 RMs, `tb_top_t2` × 3 RMs → **ALL PASS**, 0 compiler warnings. Outputs in `sim/t2_build/`.
+- Positive builds: `tb_rp_t2` × 3 RMs, `tb_top_t2` × 3 RMs → **ALL PASS**, 0 `xvlog`/`xelab` warnings, and a clean Icarus lint on the 4 builds without `rtl/array.v`. Simulator: Vivado 2022.2 XSim (§16 #1). Outputs in `sim/t2_build/<build>/build.log`.
 - Negative builds, each must FAIL:
   - **N1** `tb_rp_t2` expecting int8, compiled with `rm_int16.v`;
   - **N2** `tb_rp_t2` expecting int4, compiled with `rm_int8.v`;
   - **N3** `tb_top_t2 +define+NEG_UNGATED`: the bench does `force dut.start_ok = dut.start_rise;` → the start-gating checks must fail.
-  → **NEGATIVE OK** only if all three fail, each for the expected reason.
+  → **NEGATIVE OK** only if all three fail, each for the expected reason. Reasons checked in the log: N1/N2 must show `FAIL rm_id after release` and at least one `FAIL result`; N3 must show `FAIL gate: decoupled runs unchanged`, `FAIL gate: rm_rst runs unchanged` and `FAIL gate: decoupled blocked 1`.
 - Port-list check: the `rp_t2` port declarations in the three RM files are identical after whitespace normalisation.
 - File lists come from `scripts/t2/t2_filesets.tcl` (parsed), never duplicated.
 - Writes `docs/t2/reports/sim_summary.txt` and `docs/t2/reports/sim_cycles.csv` (`rm,case,ct_cycles,cycles`).
 
 ### 8.3 `scripts/t2/ooc_check.tcl` (run from `vivado/scratch_t2/`)
+
+Launch Vivado batch jobs from PowerShell (or cmd), not from Git Bash: under Git Bash `synth_design` failed twice with `couldn't read file ...` on its own Tcl helpers (§16 #8).
 
 For each RM: `read_verilog` its file list from `t2_filesets.tcl` → `synth_design -mode out_of_context -top rp_t2 -part xc7z020clg484-1` → `create_clock -period 10.000 [get_ports clk]` → `report_utilization` + `report_timing_summary` → `docs/t2/reports/ooc_<rm>_utilization.rpt`, `ooc_<rm>_timing.rpt`, and one row in `docs/t2/reports/ooc_summary.csv`. FF counts come from `report_utilization`, not from a `PRIMITIVE_GROUP` filter (T1 bug #3).
 
@@ -569,7 +579,7 @@ For each RM: `read_verilog` its file list from `t2_filesets.tcl` → `synth_desi
 - constraint files, VIO probe widths, config → run map.
 
 `create_project_t2.tcl`:
-- **Usage:** in the GUI Tcl console, `source .../create_project_t2.tcl` creates the real project at `vivado/t2_dfx`. In batch: `-tclargs <project_dir> [synth]`. Refuses if the directory exists, except under `vivado/scratch_t2/`.
+- **Usage:** in the GUI Tcl console, `source .../create_project_t2.tcl` creates the real project at `vivado/t2_dfx`. In batch: `-tclargs <project_dir> [synth]`, where `<project_dir>` must be an absolute path (any other argument is ignored, §16 #10). Refuses if the directory exists, except under `vivado/scratch_t2/`.
 - **Derived from T1's ground truth:** the command forms come from `docs/t2/ref/t1_journal_excerpt.tcl` and `docs/t2/ref/t1_project_facts.md` (A1 task 1). The implementation flow string is read from the existing `impl_1` run, not hardcoded.
 - **Steps** (each prints `[T2] step N ...`):
   1. `create_project t2_dfx <dir> -part xc7z020clg484-1`; target language Verilog.
@@ -579,6 +589,7 @@ For each RM: `read_verilog` its file list from `t2_filesets.tcl` → `synth_desi
   5. Enable DFX (`PR_FLOW 1`); `create_partition_def pd_t2 -module rp_t2`; `rm_int16` from the existing sources (as T1 did for `rm_add`).
   6. `rm_int8`, `rm_int4`: `create_reconfig_module -top rp_t2` + `add_files -of_objects` with their file lists.
   7. **Assert filesets:** `sources_1` holds exactly the static files (+ the VIO IP); each RM fileset holds exactly its list. If `rm_int16`'s submodule files stayed in `sources_1`, move them into the RM fileset and log it in §16. If Vivado refuses a file shared by two RM filesets (`rm_common.v`, `pe_lut.v`, `array_lut.v`), **stop and report**; do not work around it.
+     *As built (§16 #9):* `-define_from rp_t2` moved `rm_int16.v`, `array.v` and `pe.v` but left `rm_common.v` in `sources_1`; the script moves it (`remove_files -fileset sources_1` + `add_files -of_objects [get_reconfig_modules rm_int16]`) and prints a note. Vivado accepted `rm_common.v` in all three RM filesets and `array_lut.v` / `pe_lut.v` in two.
   8. Configurations `cfg_int16` (U_RP:rm_int16), `cfg_int8`, `cfg_int4`, `cfg_grey` (greybox); `impl_1` → `cfg_int16`; create `child_0/1/2_impl_1` with parent `impl_1`.
   9. Print a summary: files per fileset, RMs, configurations, run → configuration map, constraint properties, VIO widths read back; then `T2 PROJECT READY`.
 - With `synth` (scratch only): `launch_runs synth_1 rm_int16_synth_1 rm_int8_synth_1 rm_int4_synth_1 -jobs 4`, wait, assert all complete, print each run's LUT/FF/DSP, check `U_RP` is a black box in `synth_1`, then **SCRATCH OK**. Claude Code deletes the scratch project afterwards.
@@ -845,7 +856,9 @@ Film `t2_demo`: the badge goes `1111` → `0011` → `0001` while LD7 never stop
 | G23 | Concurrent Vivado | while the GUI builds, batch jobs run only from `vivado/scratch_t2/` (separate `.Xil/`) and only Tcl-only work |
 | G24 | Wrong-tier bitstreams | `hw_t2.tcl` refuses any file not in `bitstreams/t2/manifest.csv` (a T1 partial on T2 static would corrupt the RP) |
 | G25 | Stale results after a swap | `done_flag` is cleared by decouple; scripts always re-run before reading |
-| G26 | Icarus extra roots | compile with `-s <bench>`; `rm_common.v` has modules some RMs don't use |
+| G26 | Extra roots / old Icarus | XSim elaborates only the named bench; the Icarus lint uses `-s <bench>` (`rm_common.v` has modules some RMs don't use). The installed Icarus is 0.9.7 and cannot parse 2-D net arrays (T0 `array.v`), so benches run in XSim (§16 #1) |
+| G28 | Vivado batch from Git Bash | `synth_design` fails with `couldn't read file` on Vivado's own Tcl helpers; launch batch jobs from PowerShell or cmd (§16 #8) |
+| G29 | Black-box check on `synth_1` | opening `synth_1/top_t2.dcp` alone gives `CRITICAL WARNING [Project 1-486]` for `vio_t2` (IP not linked); expected, U_RP is checked with `IS_BLACKBOX` |
 | G27 | Probe names | `.ltx` names are the RTL net names; keep `vio_*` nets named exactly as in §4 |
 
 ---
@@ -1026,4 +1039,15 @@ Claude Code appends one row per deviation and fixes the referenced section in th
 
 | # | Phase | Plan said | Actual | Why | Sections updated |
 |---|---|---|---|---|---|
-| | | | | | |
+| 1 | A1 | Benches compiled and run with `iverilog -g2005`, 0 warnings | All 9 builds run in Vivado 2022.2 XSim (`xvlog`/`xelab`/`xsim`); 0 `xvlog`/`xelab` warnings. Icarus 0.9.7 kept as a compile-only lint on the 4 builds without `rtl/array.v` (clean) | The only Icarus installed (`C:\iverilog`) is v0.9.7; it rejects T0's `rtl/array.v` ("only 1 dimensional arrays are currently supported"). T0 was simulated in XSim. Karthik chose XSim for all benches | §1 item 2, §6.1, §8.1, §8.2, G26 |
+| 2 | A1 | Confirm controller / reused-module ports | `controller` has an extra `running` output (wired to unused `ct_running`); `done` is a level (state `DONE`); outputs combinational. Other port names as listed in §6.2. Measured CT_CYCLES 12, CYCLES 15 for all 27 (RM, case) pairs | Read from `rtl/controller.v`, `rtl/t1/*.v`; numbers from `sim_cycles.csv` | §6.2 |
+| 3 | A1 | Use `quant.saturate`/`clip_to_width` if they equal `clamp_full` | They do (full-range clamp, swept over all int16 at W = 8, 4); used directly. `quant.to_hex` floors `bits/4`, so `golden_t2.to_hex` uses ceil for 10/18-bit `c_exact.hex` | `python/quant.py` | §7.1 |
+| 4 | A1 | Hex format not specified | Lowercase hex in every vector file, including the 64-digit probe strings (T0 style) | Matches `quant.to_hex` and T0 vectors | §7.4 |
+| 5 | A1 | `top_t2` VIO nets named `vio_*` | VIO inputs are `assign vio_result = result_s; vio_rm_id = rm_id_s; vio_uptime = uptime_s` (T1 pattern; T1's `.ltx` shows `vio_uptime`, not `uptime_s`, for the same pattern). If the T2 `.ltx` shows `result_s`/`rm_id_s` instead, `hw_t2.tcl` lists both names (Phase A2) | Keep both the locked static names and the locked probe names | — |
+| 6 | A1 | `rm_readout`/`rm_badge` outputs `output reg` with `dont_touch` | `output wire` driven by internal `dont_touch` regs (`ovf_q`, `id_q`, `pat_q`); `pat_q` also `dont_touch` | Attribute on an internal reg is the T1-proven form; PAT's 0 bits would otherwise be constant-driven partition pins | §6.5 |
+| 7 | A1 | `array_lut` = T0 `array.v` geometry | Same geometry and layout, but flat interconnect buses instead of 2-D net arrays | Lets the int8/int4 builds pass the Icarus 0.9.7 lint (hard rule 3) | §6.5 |
+| 8 | A1 | Vivado batch launch shell not specified | OOC and project validation launched from PowerShell. From Git Bash, `synth_design` failed twice (`couldn't read file ".../.Xil/.../realtime/rp_t2.tcl"`, then `".../scripts/rt/fpga_tcl/rtSynthParallelPrep.tcl"`, which exists) | Observed in this session | §8.3, G28 |
+| 9 | A1 | Move rm_int16 submodules out of `sources_1` if they stay | `-define_from rp_t2` moved `rm_int16.v`, `array.v`, `pe.v`; `rm_common.v` stayed in `sources_1` and the script moved it. Shared RM files accepted by Vivado | `scratch_validation.log` | §8.4 step 7 |
+| 10 | A1 | `-tclargs <project_dir> [synth]` | `<project_dir>` is taken only from an absolute-path argument | A stray non-path argument can never redirect the real project | §8.4 |
+| 11 | A1 | Cleanup deletes every `**/__pycache__/` | `scripts/t1/__pycache__/` (ignored, 0.010 MB) kept | Hard rule 1: `scripts/t1/**` is read-only | — |
+| 12 | A1 | T1 command forms | Taken from T1's journal (`vivado_19340.backup.jou`): `create_reconfig_module ... -define_from rp_t2` for the first RM, `-top rp_t2` + `add_files -norecurse ... -of_objects [get_reconfig_modules ...]` for the others, greybox `create_pr_configuration -partitions { } -greyboxes [list U_RP]`, `create_run ... -parent_run impl_1 -flow <impl_1 FLOW> -pr_config ...` (FLOW read back = `Vivado Implementation 2022`). Not repeated from T1: `board_part` (plan does not ask for it), `generate_target {instantiation_template}` and `export_ip_user_files` (`generate_target all` + `create_ip_run` suffice) | `docs/t2/ref/` | — |

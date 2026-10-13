@@ -1,0 +1,10 @@
+{
+  "prec": "int4",
+  "W": 4,
+  "ACC_W": 10,
+  "rm_id": "04",
+  "case": "extremes_neg",
+  "seed": null,
+  "any_ovf": false,
+  "n_clamped_inputs": 32
+}

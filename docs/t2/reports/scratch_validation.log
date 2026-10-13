@@ -1,0 +1,1489 @@
+﻿
+****** Vivado v2022.2 (64-bit)
+  **** SW Build 3671981 on Fri Oct 14 05:00:03 MDT 2022
+  **** IP Build 3669848 on Fri Oct 14 08:30:02 MDT 2022
+    ** Copyright 1986-2022 Xilinx, Inc. All Rights Reserved.
+
+source ../../scripts/t2/create_project_t2.tcl
+# source [file join [file dirname [info script]] t2_filesets.tcl]
+## set ::T2_ROOT [file normalize [file join [file dirname [info script]] ../..]]
+## set ::T2_PART xc7z020clg484-1
+## set ::T2_TOP  top_t2
+## set ::T2_STATIC_FILES {rtl/t2/top_t2.v rtl/t1/rst_sync.v rtl/t1/uptime.v rtl/t1/dfx_decouple.v rtl/controller.v}
+## set ::T2_RMS {rm_int16 rm_int8 rm_int4}
+## set ::T2_RM_FILES(rm_int16) {rtl/t2/rm/rm_int16.v rtl/array.v rtl/pe.v rtl/t2/rm/rm_common.v}
+## set ::T2_RM_FILES(rm_int8)  {rtl/t2/rm/rm_int8.v rtl/t2/rm/array_lut.v rtl/t2/rm/pe_lut.v rtl/t2/rm/rm_common.v}
+## set ::T2_RM_FILES(rm_int4)  {rtl/t2/rm/rm_int4.v rtl/t2/rm/array_lut.v rtl/t2/rm/pe_lut.v rtl/t2/rm/rm_common.v}
+## set ::T2_XDC_PINS   constraints/top_t2.xdc
+## set ::T2_XDC_PBLOCK constraints/top_t2_pblock.xdc
+## set ::T2_VIO_IN_WIDTHS  {32 8 32 4 16}
+## set ::T2_VIO_OUT_WIDTHS {1 1 1 4 256 256}
+## set ::T2_CFG_RM  {cfg_int16 rm_int16 cfg_int8 rm_int8 cfg_int4 rm_int4 cfg_grey greybox}
+## set ::T2_RUN_CFG {impl_1 cfg_int16 child_0_impl_1 cfg_int8 child_1_impl_1 cfg_int4 child_2_impl_1 cfg_grey}
+# set root $::T2_ROOT
+# set scratch [file normalize $root/vivado/scratch_t2]
+# proc t2_step {n msg} { puts "\[T2\] step $n $msg" }
+# proc t2_fail {msg}   { puts "\[T2\] ASSERT FAILED: $msg"; error "T2 project script stopped: $msg" }
+# proc t2_norm {paths} {
+#     set out {}
+#     foreach p $paths { lappend out [string tolower [file normalize $p]] }
+#     return [lsort $out]
+# }
+# proc t2_abs {rel} { return [file normalize $::T2_ROOT/$rel] }
+# set args_in [expr {[info exists ::argv] ? $::argv : {}}]
+# set proj_dir [file normalize $root/vivado/t2_dfx]
+# set do_synth 0
+# foreach a $args_in {
+#     # only an absolute path counts as <dir>, so a stray launcher argument can never redirect the project
+#     if {$a eq "synth"} { set do_synth 1 } elseif {[file pathtype $a] eq "absolute"} { set proj_dir [file normalize $a] }
+# }
+# set in_scratch [string match -nocase "$scratch/*" $proj_dir]
+# if {$do_synth && !$in_scratch} { t2_fail "`synth` is allowed only under $scratch" }
+# if {[file exists $proj_dir]} {
+#     if {!$in_scratch} { t2_fail "$proj_dir already exists; refusing (delete it yourself if that is intended)" }
+#     file delete -force $proj_dir
+# }
+# t2_step 1 "create_project t2_dfx $proj_dir -part $::T2_PART"
+[T2] step 1 create_project t2_dfx D:/Projects/RC_Project/vivado/scratch_t2/t2_dfx_check -part xc7z020clg484-1
+# create_project t2_dfx $proj_dir -part $::T2_PART
+create_project: Time (s): cpu = 00:00:05 ; elapsed = 00:00:06 . Memory (MB): peak = 1042.379 ; gain = 157.246
+# set_property target_language Verilog [current_project]
+# t2_step 2 "add static + rm_int16 sources to sources_1 (no copy)"
+[T2] step 2 add static + rm_int16 sources to sources_1 (no copy)
+# set static_abs {}
+# foreach f $::T2_STATIC_FILES { lappend static_abs [t2_abs $f] }
+# set int16_abs {}
+# foreach f $::T2_RM_FILES(rm_int16) { lappend int16_abs [t2_abs $f] }
+# add_files -norecurse -fileset sources_1 [concat $static_abs $int16_abs]
+# set_property top $::T2_TOP [get_filesets sources_1]
+# update_compile_order -fileset sources_1
+# t2_step 3 "add constraints; Pblock XDC: implementation only, target file"
+[T2] step 3 add constraints; Pblock XDC: implementation only, target file
+# set xdc_pins [t2_abs $::T2_XDC_PINS]
+# set xdc_pb   [t2_abs $::T2_XDC_PBLOCK]
+# add_files -fileset constrs_1 -norecurse [list $xdc_pins $xdc_pb]
+# set_property used_in_synthesis false [get_files $xdc_pb]
+# set_property used_in_implementation true [get_files $xdc_pb]
+# set_property target_constrs_file $xdc_pb [get_filesets constrs_1]
+# t2_step 4 "create_ip vio -module_name vio_t2 (in [join $::T2_VIO_IN_WIDTHS /], out [join $::T2_VIO_OUT_WIDTHS /])"
+[T2] step 4 create_ip vio -module_name vio_t2 (in 32/8/32/4/16, out 1/1/1/4/256/256)
+# create_ip -name vio -vendor xilinx.com -library ip -version 3.0 -module_name vio_t2
+INFO: [IP_Flow 19-234] Refreshing IP repositories
+INFO: [IP_Flow 19-1704] No user IP repositories specified
+INFO: [IP_Flow 19-2313] Loaded Vivado IP repository 'C:/Xilinx/Vivado/2022.2/data/ip'.
+# set cfg [list CONFIG.C_EN_PROBE_IN_ACTIVITY {0} \
+#               CONFIG.C_NUM_PROBE_IN [llength $::T2_VIO_IN_WIDTHS] \
+#               CONFIG.C_NUM_PROBE_OUT [llength $::T2_VIO_OUT_WIDTHS] \
+#               CONFIG.Component_Name {vio_t2}]
+# set i 0
+# foreach w $::T2_VIO_IN_WIDTHS  { lappend cfg CONFIG.C_PROBE_IN${i}_WIDTH $w;  incr i }
+# set i 0
+# foreach w $::T2_VIO_OUT_WIDTHS { lappend cfg CONFIG.C_PROBE_OUT${i}_WIDTH $w; incr i }
+# set_property -dict $cfg [get_ips vio_t2]
+WARNING: [Vivado 12-3523] Attempt to change 'Component_Name' from 'vio_t2' to 'vio_t2' is not allowed and is ignored.
+# set xci [get_files -of_objects [get_filesets sources_1] vio_t2.xci]
+# generate_target all $xci
+INFO: [IP_Flow 19-1686] Generating 'Instantiation Template' target for IP 'vio_t2'...
+INFO: [IP_Flow 19-1686] Generating 'Synthesis' target for IP 'vio_t2'...
+INFO: [IP_Flow 19-1686] Generating 'Simulation' target for IP 'vio_t2'...
+INFO: [IP_Flow 19-1686] Generating 'Change Log' target for IP 'vio_t2'...
+# create_ip_run $xci
+# update_compile_order -fileset sources_1
+# t2_step 5 "PR_FLOW 1; create_partition_def pd_t2 -module rp_t2; rm_int16 -define_from rp_t2"
+[T2] step 5 PR_FLOW 1; create_partition_def pd_t2 -module rp_t2; rm_int16 -define_from rp_t2
+# set_property PR_FLOW 1 [current_project]
+# create_partition_def -name pd_t2 -module rp_t2
+# create_reconfig_module -name rm_int16 -partition_def [get_partition_defs pd_t2] -define_from rp_t2
+INFO: [Vivado 12-2924] Moving file 'D:/Projects/RC_Project/rtl/array.v' from fileset 'sources_1' to fileset 'rm_int16'.
+INFO: [Vivado 12-2924] Moving file 'D:/Projects/RC_Project/rtl/pe.v' from fileset 'sources_1' to fileset 'rm_int16'.
+INFO: [Vivado 12-2924] Copying file 'D:/Projects/RC_Project/rtl/t2/rm/rm_common.v' from fileset 'sources_1' to fileset 'rm_int16'.
+INFO: [Vivado 12-2924] Moving file 'D:/Projects/RC_Project/rtl/t2/rm/rm_int16.v' from fileset 'sources_1' to fileset 'rm_int16'.
+# foreach rm {rm_int8 rm_int4} {
+#     t2_step 6 "create_reconfig_module $rm -top rp_t2 + add_files -of_objects ($::T2_RM_FILES($rm))"
+#     create_reconfig_module -name $rm -partition_def [get_partition_defs pd_t2] -top rp_t2
+#     set fl {}
+#     foreach f $::T2_RM_FILES($rm) { lappend fl [t2_abs $f] }
+#     if {[catch {add_files -norecurse $fl -of_objects [get_reconfig_modules $rm]} err]} {
+#         t2_fail "add_files to $rm refused (shared RM file?): $err"
+#     }
+# }
+[T2] step 6 create_reconfig_module rm_int8 -top rp_t2 + add_files -of_objects (rtl/t2/rm/rm_int8.v rtl/t2/rm/array_lut.v rtl/t2/rm/pe_lut.v rtl/t2/rm/rm_common.v)
+[T2] step 6 create_reconfig_module rm_int4 -top rp_t2 + add_files -of_objects (rtl/t2/rm/rm_int4.v rtl/t2/rm/array_lut.v rtl/t2/rm/pe_lut.v rtl/t2/rm/rm_common.v)
+# t2_step 7 "assert filesets"
+[T2] step 7 assert filesets
+# proc t2_rm_files {rm} { return [get_files -norecurse -of_objects [get_reconfig_modules $rm]] }
+# set src1 [get_files -norecurse -of_objects [get_filesets sources_1]]
+# set moved {}
+# foreach f $int16_abs {
+#     if {[lsearch -exact [t2_norm $src1] [string tolower $f]] >= 0} { lappend moved $f }
+# }
+# if {[llength $moved]} {
+#     puts "\[T2\] note: moving from sources_1 into rm_int16: $moved"
+#     remove_files -fileset sources_1 $moved
+#     add_files -norecurse $moved -of_objects [get_reconfig_modules rm_int16]
+# }
+[T2] note: moving from sources_1 into rm_int16: D:/Projects/RC_Project/rtl/t2/rm/rm_common.v
+WARNING: [filemgmt 56-12] File 'D:/Projects/RC_Project/rtl/t2/rm/rm_common.v' cannot be added to the project because it already exists in the project, skipping this file
+# set src1 [get_files -norecurse -of_objects [get_filesets sources_1]]
+# set src1_rtl {}
+# foreach f $src1 { if {[file extension $f] ne ".xci"} { lappend src1_rtl $f } }
+# if {[t2_norm $src1_rtl] ne [t2_norm $static_abs]} { t2_fail "sources_1 = $src1_rtl, expected $static_abs" }
+# if {[llength [get_ips vio_t2]] != 1} { t2_fail "vio_t2 IP missing" }
+# foreach rm $::T2_RMS {
+#     set want {}
+#     foreach f $::T2_RM_FILES($rm) { lappend want [t2_abs $f] }
+#     set have [t2_rm_files $rm]
+#     if {[t2_norm $have] ne [t2_norm $want]} { t2_fail "$rm fileset = $have, expected $want" }
+# }
+# t2_step 8 "configurations + implementation runs"
+[T2] step 8 configurations + implementation runs
+# foreach {cfgname rm} $::T2_CFG_RM {
+#     if {$rm eq "greybox"} {
+#         create_pr_configuration -name $cfgname -partitions { } -greyboxes [list U_RP]
+#     } else {
+#         create_pr_configuration -name $cfgname -partitions [list U_RP:$rm]
+#     }
+# }
+# set flow [get_property FLOW [get_runs impl_1]]
+# foreach {run cfgname} $::T2_RUN_CFG {
+#     if {$run eq "impl_1"} {
+#         set_property PR_CONFIGURATION $cfgname [get_runs impl_1]
+#     } else {
+#         create_run $run -parent_run impl_1 -flow $flow -pr_config $cfgname
+#     }
+# }
+Run is defaulting to parent run srcset: sources_1
+Run is defaulting to parent run constrset: constrs_1
+Run is defaulting to parent run part: xc7z020clg484-1
+Run is defaulting to parent run srcset: sources_1
+Run is defaulting to parent run constrset: constrs_1
+Run is defaulting to parent run part: xc7z020clg484-1
+Run is defaulting to parent run srcset: sources_1
+Run is defaulting to parent run constrset: constrs_1
+Run is defaulting to parent run part: xc7z020clg484-1
+# t2_step 9 "summary"
+[T2] step 9 summary
+# puts "\[T2\] project      : [get_property DIRECTORY [current_project]]  part [get_property PART [current_project]]  PR_FLOW [get_property PR_FLOW [current_project]]"
+[T2] project      : D:/Projects/RC_Project/vivado/scratch_t2/t2_dfx_check  part xc7z020clg484-1  PR_FLOW 1
+# puts "\[T2\] top          : [get_property TOP [get_filesets sources_1]]"
+[T2] top          : top_t2
+# puts "\[T2\] sources_1    : [lsort [get_files -norecurse -of_objects [get_filesets sources_1]]]"
+[T2] sources_1    : D:/Projects/RC_Project/rtl/controller.v D:/Projects/RC_Project/rtl/t1/dfx_decouple.v D:/Projects/RC_Project/rtl/t1/rst_sync.v D:/Projects/RC_Project/rtl/t1/uptime.v D:/Projects/RC_Project/rtl/t2/top_t2.v
+# foreach rm $::T2_RMS {
+#     puts "\[T2\] $rm fileset: [lsort [t2_rm_files $rm]]"
+# }
+[T2] rm_int16 fileset: D:/Projects/RC_Project/rtl/array.v D:/Projects/RC_Project/rtl/pe.v D:/Projects/RC_Project/rtl/t2/rm/rm_common.v D:/Projects/RC_Project/rtl/t2/rm/rm_int16.v
+[T2] rm_int8 fileset: D:/Projects/RC_Project/rtl/t2/rm/array_lut.v D:/Projects/RC_Project/rtl/t2/rm/pe_lut.v D:/Projects/RC_Project/rtl/t2/rm/rm_common.v D:/Projects/RC_Project/rtl/t2/rm/rm_int8.v
+[T2] rm_int4 fileset: D:/Projects/RC_Project/rtl/t2/rm/array_lut.v D:/Projects/RC_Project/rtl/t2/rm/pe_lut.v D:/Projects/RC_Project/rtl/t2/rm/rm_common.v D:/Projects/RC_Project/rtl/t2/rm/rm_int4.v
+# puts "\[T2\] partition def: [get_partition_defs]  RMs: [lsort [get_reconfig_modules]]"
+[T2] partition def: pd_t2  RMs: rm_int16 rm_int4 rm_int8
+# foreach c [lsort [get_pr_configurations]] {
+#     puts "\[T2\] configuration $c : PARTITION_CELL_RMS={[get_property PARTITION_CELL_RMS [get_pr_configurations $c]]} GREYBOX_CELLS={[get_property GREYBOX_CELLS [get_pr_configurations $c]]}"
+# }
+[T2] configuration cfg_grey : PARTITION_CELL_RMS={} GREYBOX_CELLS={U_RP}
+[T2] configuration cfg_int16 : PARTITION_CELL_RMS={U_RP:rm_int16} GREYBOX_CELLS={}
+[T2] configuration cfg_int4 : PARTITION_CELL_RMS={U_RP:rm_int4} GREYBOX_CELLS={}
+[T2] configuration cfg_int8 : PARTITION_CELL_RMS={U_RP:rm_int8} GREYBOX_CELLS={}
+# foreach {run cfgname} $::T2_RUN_CFG {
+#     set r [get_runs $run]
+#     set got [get_property PR_CONFIGURATION $r]
+#     puts "\[T2\] run $run -> $got  parent={[get_property PARENT $r]}  flow={[get_property FLOW $r]}"
+#     if {$got ne $cfgname} { t2_fail "$run has PR_CONFIGURATION $got, expected $cfgname" }
+# }
+[T2] run impl_1 -> cfg_int16  parent={synth_1}  flow={Vivado Implementation 2022}
+[T2] run child_0_impl_1 -> cfg_int8  parent={impl_1}  flow={Vivado Implementation 2022}
+[T2] run child_1_impl_1 -> cfg_int4  parent={impl_1}  flow={Vivado Implementation 2022}
+[T2] run child_2_impl_1 -> cfg_grey  parent={impl_1}  flow={Vivado Implementation 2022}
+# foreach x [list $xdc_pins $xdc_pb] {
+#     set fo [get_files $x]
+#     puts "\[T2\] xdc [file tail $x]: used_in_synthesis [get_property USED_IN_SYNTHESIS $fo] used_in_implementation [get_property USED_IN_IMPLEMENTATION $fo]"
+# }
+[T2] xdc top_t2.xdc: used_in_synthesis 1 used_in_implementation 1
+[T2] xdc top_t2_pblock.xdc: used_in_synthesis 0 used_in_implementation 1
+# set tgt [get_property TARGET_CONSTRS_FILE [get_filesets constrs_1]]
+# puts "\[T2\] target constraints file: $tgt"
+[T2] target constraints file: D:/Projects/RC_Project/constraints/top_t2_pblock.xdc
+# if {[string tolower [file normalize $tgt]] ne [string tolower $xdc_pb]} { t2_fail "target constraints file is $tgt" }
+# if {[get_property USED_IN_SYNTHESIS [get_files $xdc_pb]]} { t2_fail "Pblock XDC is used in synthesis" }
+# set ip [get_ips vio_t2]
+# set win {};
+# set wout {}
+# for {set i 0} {$i < [get_property CONFIG.C_NUM_PROBE_IN $ip]} {incr i}  { lappend win  [get_property CONFIG.C_PROBE_IN${i}_WIDTH $ip] }
+# for {set i 0} {$i < [get_property CONFIG.C_NUM_PROBE_OUT $ip]} {incr i} { lappend wout [get_property CONFIG.C_PROBE_OUT${i}_WIDTH $ip] }
+# puts "\[T2\] vio_t2 widths in {$win} out {$wout} activity [get_property CONFIG.C_EN_PROBE_IN_ACTIVITY $ip]"
+[T2] vio_t2 widths in {32 8 32 4 16} out {1 1 1 4 256 256} activity 0
+# if {$win ne $::T2_VIO_IN_WIDTHS || $wout ne $::T2_VIO_OUT_WIDTHS} { t2_fail "VIO widths read back as in {$win} out {$wout}" }
+# puts "T2 PROJECT READY"
+T2 PROJECT READY
+# if {$do_synth} {
+#     set sruns {synth_1 rm_int16_synth_1 rm_int8_synth_1 rm_int4_synth_1}
+#     puts "\[T2\] launch_runs $sruns -jobs 4"
+#     launch_runs {*}$sruns -jobs 4
+#     foreach r $sruns { wait_on_run $r }
+#     set ok 1
+#     foreach r [concat vio_t2_synth_1 $sruns] {
+#         set st [get_property STATUS [get_runs $r]]
+#         set rpt [glob -nocomplain [get_property DIRECTORY [get_runs $r]]/*_utilization_synth.rpt]
+#         set lut ?; set ff ?; set dsp ?
+#         if {[llength $rpt] == 1} {
+#             set fh [open [lindex $rpt 0] r]; set u [read $fh]; close $fh
+#             regexp -line {^\|\s*Slice LUTs\*?\s*\|\s*([0-9]+)} $u -> lut
+#             regexp -line {^\|\s*Slice Registers\s*\|\s*([0-9]+)} $u -> ff
+#             regexp -line {^\|\s*DSPs\s*\|\s*([0-9]+)} $u -> dsp
+#         }
+#         puts [format "\[T2\] %-18s %-28s LUT %5s  FF %5s  DSP %3s" $r $st $lut $ff $dsp]
+#         if {![string match "*Complete*" $st]} { set ok 0 }
+#     }
+#     set dcp [get_property DIRECTORY [get_runs synth_1]]/${::T2_TOP}.dcp
+#     open_checkpoint $dcp
+#     set bb [get_property IS_BLACKBOX [get_cells U_RP]]
+#     puts "\[T2\] synth_1 U_RP: REF_NAME [get_property REF_NAME [get_cells U_RP]]  IS_BLACKBOX $bb  leaf cells inside [llength [get_cells -quiet -hier -filter {NAME =~ U_RP/* && IS_PRIMITIVE}]]"
+#     if {!$bb} { set ok 0 }
+#     close_design
+#     puts [expr {$ok ? "SCRATCH OK" : "SCRATCH FAIL"}]
+# }
+[T2] launch_runs synth_1 rm_int16_synth_1 rm_int8_synth_1 rm_int4_synth_1 -jobs 4
+WARNING: [Vivado 12-7122] Auto Incremental Compile:: No reference checkpoint was found in run synth_1. Auto-incremental flow will not be run, the standard flow will be run instead.
+[Wed Oct 14 01:28:25 2026] Launched vio_t2_synth_1, rm_int16_synth_1, rm_int8_synth_1, rm_int4_synth_1...
+Run output will be captured here:
+vio_t2_synth_1: D:/Projects/RC_Project/vivado/scratch_t2/t2_dfx_check/t2_dfx.runs/vio_t2_synth_1/runme.log
+rm_int16_synth_1: D:/Projects/RC_Project/vivado/scratch_t2/t2_dfx_check/t2_dfx.runs/rm_int16_synth_1/runme.log
+rm_int8_synth_1: D:/Projects/RC_Project/vivado/scratch_t2/t2_dfx_check/t2_dfx.runs/rm_int8_synth_1/runme.log
+rm_int4_synth_1: D:/Projects/RC_Project/vivado/scratch_t2/t2_dfx_check/t2_dfx.runs/rm_int4_synth_1/runme.log
+[Wed Oct 14 01:28:25 2026] Launched synth_1, rm_int16_synth_1, rm_int8_synth_1, rm_int4_synth_1...
+Run output will be captured here:
+synth_1: D:/Projects/RC_Project/vivado/scratch_t2/t2_dfx_check/t2_dfx.runs/synth_1/runme.log
+rm_int16_synth_1: D:/Projects/RC_Project/vivado/scratch_t2/t2_dfx_check/t2_dfx.runs/rm_int16_synth_1/runme.log
+rm_int8_synth_1: D:/Projects/RC_Project/vivado/scratch_t2/t2_dfx_check/t2_dfx.runs/rm_int8_synth_1/runme.log
+rm_int4_synth_1: D:/Projects/RC_Project/vivado/scratch_t2/t2_dfx_check/t2_dfx.runs/rm_int4_synth_1/runme.log
+[Wed Oct 14 01:28:25 2026] Waiting for synth_1 to finish...
+
+
+*** Running vivado
+    with args -log top_t2.vds -m64 -product Vivado -mode batch -messageDb vivado.pb -notrace -source top_t2.tcl
+
+
+
+****** Vivado v2022.2 (64-bit)
+  **** SW Build 3671981 on Fri Oct 14 05:00:03 MDT 2022
+  **** IP Build 3669848 on Fri Oct 14 08:30:02 MDT 2022
+    ** Copyright 1986-2022 Xilinx, Inc. All Rights Reserved.
+
+source top_t2.tcl -notrace
+Command: synth_design -top top_t2 -part xc7z020clg484-1
+Starting synth_design
+Attempting to get a license for feature 'Synthesis' and/or device 'xc7z020'
+INFO: [Common 17-349] Got license for feature 'Synthesis' and/or device 'xc7z020'
+INFO: [Device 21-403] Loading part xc7z020clg484-1
+INFO: [Synth 8-7079] Multithreading enabled for synth_design using a maximum of 2 processes.
+INFO: [Synth 8-7078] Launching helper process for spawning children vivado processes
+INFO: [Synth 8-7075] Helper process launched with PID 35504
+INFO: [Synth 8-11241] undeclared symbol 'REGCCE', assumed default net type 'wire' [C:/Xilinx/Vivado/2022.2/data/verilog/src/unimacro/BRAM_SINGLE_MACRO.v:2170]
+---------------------------------------------------------------------------------
+Starting RTL Elaboration : Time (s): cpu = 00:00:03 ; elapsed = 00:00:03 . Memory (MB): peak = 1896.641 ; gain = 409.457
+---------------------------------------------------------------------------------
+INFO: [Synth 8-6157] synthesizing module 'top_t2' [D:/Projects/RC_Project/rtl/t2/top_t2.v:17]
+INFO: [Synth 8-6157] synthesizing module 'rst_sync' [D:/Projects/RC_Project/rtl/t1/rst_sync.v:7]
+INFO: [Synth 8-6155] done synthesizing module 'rst_sync' (0#1) [D:/Projects/RC_Project/rtl/t1/rst_sync.v:7]
+INFO: [Synth 8-6157] synthesizing module 'uptime' [D:/Projects/RC_Project/rtl/t1/uptime.v:6]
+	Parameter TICK_DIV bound to: 100000000 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'uptime' (0#1) [D:/Projects/RC_Project/rtl/t1/uptime.v:6]
+INFO: [Synth 8-6157] synthesizing module 'controller' [D:/Projects/RC_Project/rtl/controller.v:20]
+INFO: [Synth 8-226] default block is never used [D:/Projects/RC_Project/rtl/controller.v:48]
+INFO: [Synth 8-6155] done synthesizing module 'controller' (0#1) [D:/Projects/RC_Project/rtl/controller.v:20]
+INFO: [Synth 8-6157] synthesizing module 'rp_t2' [D:/Projects/RC_Project/vivado/scratch_t2/t2_dfx_check/t2_dfx.runs/synth_1/.Xil/Vivado-38620-Karthik/realtime/rp_t2_stub.v:5]
+INFO: [Synth 8-6155] done synthesizing module 'rp_t2' (0#1) [D:/Projects/RC_Project/vivado/scratch_t2/t2_dfx_check/t2_dfx.runs/synth_1/.Xil/Vivado-38620-Karthik/realtime/rp_t2_stub.v:5]
+INFO: [Synth 8-6157] synthesizing module 'dfx_decouple' [D:/Projects/RC_Project/rtl/t1/dfx_decouple.v:6]
+	Parameter W bound to: 45 - type: integer 
+	Parameter SAFE bound to: 45'b000000000000000000000000000000000111111110000 
+INFO: [Synth 8-6155] done synthesizing module 'dfx_decouple' (0#1) [D:/Projects/RC_Project/rtl/t1/dfx_decouple.v:6]
+INFO: [Synth 8-6157] synthesizing module 'vio_t2' [D:/Projects/RC_Project/vivado/scratch_t2/t2_dfx_check/t2_dfx.runs/synth_1/.Xil/Vivado-38620-Karthik/realtime/vio_t2_stub.v:5]
+INFO: [Synth 8-6155] done synthesizing module 'vio_t2' (0#1) [D:/Projects/RC_Project/vivado/scratch_t2/t2_dfx_check/t2_dfx.runs/synth_1/.Xil/Vivado-38620-Karthik/realtime/vio_t2_stub.v:5]
+INFO: [Synth 8-6155] done synthesizing module 'top_t2' (0#1) [D:/Projects/RC_Project/rtl/t2/top_t2.v:17]
+INFO: [Synth 8-6071] Mark debug on the nets applies keep_hierarchy on instance 'U_VIO'. This will prevent further optimization [D:/Projects/RC_Project/rtl/t2/top_t2.v:141]
+INFO: [Synth 8-6071] Mark debug on the nets applies keep_hierarchy on instance 'U_DC'. This will prevent further optimization [D:/Projects/RC_Project/rtl/t2/top_t2.v:128]
+INFO: [Synth 8-6071] Mark debug on the nets applies keep_hierarchy on instance 'U_RP'. This will prevent further optimization [D:/Projects/RC_Project/rtl/t2/top_t2.v:115]
+INFO: [Synth 8-6071] Mark debug on the nets applies keep_hierarchy on instance 'U_CT'. This will prevent further optimization [D:/Projects/RC_Project/rtl/t2/top_t2.v:70]
+INFO: [Synth 8-6071] Mark debug on the nets applies keep_hierarchy on instance 'U_UP'. This will prevent further optimization [D:/Projects/RC_Project/rtl/t2/top_t2.v:30]
+---------------------------------------------------------------------------------
+Finished RTL Elaboration : Time (s): cpu = 00:00:04 ; elapsed = 00:00:04 . Memory (MB): peak = 1987.863 ; gain = 500.680
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Handling Custom Attributes
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Handling Custom Attributes : Time (s): cpu = 00:00:04 ; elapsed = 00:00:04 . Memory (MB): peak = 1987.863 ; gain = 500.680
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished RTL Optimization Phase 1 : Time (s): cpu = 00:00:04 ; elapsed = 00:00:04 . Memory (MB): peak = 1987.863 ; gain = 500.680
+---------------------------------------------------------------------------------
+Netlist sorting complete. Time (s): cpu = 00:00:00 ; elapsed = 00:00:00.008 . Memory (MB): peak = 1987.863 ; gain = 0.000
+INFO: [Project 1-570] Preparing netlist for logic optimization
+
+Processing XDC Constraints
+Initializing timing engine
+Parsing XDC File [D:/Projects/RC_Project/vivado/scratch_t2/t2_dfx_check/t2_dfx.runs/rm_int16_synth_1/rp_t2/rp_t2_in_context.xdc] for cell 'U_RP'
+Finished Parsing XDC File [D:/Projects/RC_Project/vivado/scratch_t2/t2_dfx_check/t2_dfx.runs/rm_int16_synth_1/rp_t2/rp_t2_in_context.xdc] for cell 'U_RP'
+Parsing XDC File [d:/Projects/RC_Project/vivado/scratch_t2/t2_dfx_check/t2_dfx.gen/sources_1/ip/vio_t2/vio_t2/vio_t2_in_context.xdc] for cell 'U_VIO'
+Finished Parsing XDC File [d:/Projects/RC_Project/vivado/scratch_t2/t2_dfx_check/t2_dfx.gen/sources_1/ip/vio_t2/vio_t2/vio_t2_in_context.xdc] for cell 'U_VIO'
+Parsing XDC File [D:/Projects/RC_Project/vivado/scratch_t2/t2_dfx_check/t2_dfx.runs/synth_1/hd_reconfig.xdc]
+Finished Parsing XDC File [D:/Projects/RC_Project/vivado/scratch_t2/t2_dfx_check/t2_dfx.runs/synth_1/hd_reconfig.xdc]
+Parsing XDC File [D:/Projects/RC_Project/constraints/top_t2.xdc]
+Finished Parsing XDC File [D:/Projects/RC_Project/constraints/top_t2.xdc]
+INFO: [Project 1-236] Implementation specific constraints were found while reading constraint file [D:/Projects/RC_Project/constraints/top_t2.xdc]. These constraints will be ignored for synthesis but will be used in implementation. Impacted constraints are listed in the file [.Xil/top_t2_propImpl.xdc].
+Resolution: To avoid this warning, move constraints listed in [.Xil/top_t2_propImpl.xdc] to another XDC file and exclude this new file from synthesis with the used_in_synthesis property (File Properties dialog in GUI) and re-run elaboration/synthesis.
+Completed Processing XDC Constraints
+
+Netlist sorting complete. Time (s): cpu = 00:00:00 ; elapsed = 00:00:00 . Memory (MB): peak = 2067.539 ; gain = 0.000
+INFO: [Project 1-111] Unisim Transformation Summary:
+No Unisim elements were transformed.
+
+Constraint Validation Runtime : Time (s): cpu = 00:00:00 ; elapsed = 00:00:00.003 . Memory (MB): peak = 2067.539 ; gain = 0.000
+INFO: [Synth 8-11241] undeclared symbol 'REGCCE', assumed default net type 'wire' [C:/Xilinx/Vivado/2022.2/data/verilog/src/unimacro/BRAM_SINGLE_MACRO.v:2170]
+---------------------------------------------------------------------------------
+Finished Constraint Validation : Time (s): cpu = 00:00:09 ; elapsed = 00:00:10 . Memory (MB): peak = 2067.539 ; gain = 580.355
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Loading Part and Timing Information
+---------------------------------------------------------------------------------
+Loading part: xc7z020clg484-1
+---------------------------------------------------------------------------------
+Finished Loading Part and Timing Information : Time (s): cpu = 00:00:09 ; elapsed = 00:00:10 . Memory (MB): peak = 2067.539 ; gain = 580.355
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Applying 'set_property' XDC Constraints
+---------------------------------------------------------------------------------
+Applied set_property DONT_TOUCH = true for U_RP. (constraint file  D:/Projects/RC_Project/vivado/scratch_t2/t2_dfx_check/t2_dfx.runs/synth_1/hd_reconfig.xdc, line 4).
+Applied set_property HD.RECONFIGURABLE = true for U_RP. (constraint file  D:/Projects/RC_Project/vivado/scratch_t2/t2_dfx_check/t2_dfx.runs/synth_1/hd_reconfig.xdc, line 4).
+Applied set_property KEEP_HIERARCHY = SOFT for U_VIO. (constraint file  auto generated constraint).
+---------------------------------------------------------------------------------
+Finished applying 'set_property' XDC Constraints : Time (s): cpu = 00:00:09 ; elapsed = 00:00:10 . Memory (MB): peak = 2067.539 ; gain = 580.355
+---------------------------------------------------------------------------------
+INFO: [Synth 8-802] inferred FSM for state register 'state_reg' in module 'controller'
+---------------------------------------------------------------------------------------------------
+                   State |                     New Encoding |                Previous Encoding 
+---------------------------------------------------------------------------------------------------
+                  S_IDLE |                             1000 |                               00
+                 S_CLEAR |                             0010 |                               01
+                S_STREAM |                             0100 |                               10
+                  S_DONE |                             0001 |                               11
+---------------------------------------------------------------------------------------------------
+INFO: [Synth 8-3354] encoded FSM with state register 'state_reg' using encoding 'one-hot' in module 'controller'
+---------------------------------------------------------------------------------
+Finished RTL Optimization Phase 2 : Time (s): cpu = 00:00:09 ; elapsed = 00:00:10 . Memory (MB): peak = 2067.539 ; gain = 580.355
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start RTL Component Statistics 
+---------------------------------------------------------------------------------
+Detailed RTL Component Info : 
++---Adders : 
+	   2 Input   32 Bit       Adders := 3     
+	   2 Input    4 Bit       Adders := 1     
++---Registers : 
+	               64 Bit    Registers := 2     
+	               45 Bit    Registers := 1     
+	                4 Bit    Registers := 1     
+	                3 Bit    Registers := 1     
+	                2 Bit    Registers := 1     
+	                1 Bit    Registers := 7     
++---Muxes : 
+	   2 Input   64 Bit        Muxes := 2     
+	   4 Input   16 Bit        Muxes := 4     
+	   2 Input   16 Bit        Muxes := 6     
+	  16 Input   16 Bit        Muxes := 1     
+	  32 Input    4 Bit        Muxes := 1     
+	   4 Input    4 Bit        Muxes := 2     
+	  32 Input    2 Bit        Muxes := 1     
+	  16 Input    2 Bit        Muxes := 3     
+	   2 Input    1 Bit        Muxes := 4     
+	   4 Input    1 Bit        Muxes := 2     
+---------------------------------------------------------------------------------
+Finished RTL Component Statistics 
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Part Resource Summary
+---------------------------------------------------------------------------------
+Part Resources:
+DSPs: 220 (col length:60)
+BRAMs: 280 (col length: RAMB18 60 RAMB36 30)
+---------------------------------------------------------------------------------
+Finished Part Resource Summary
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Cross Boundary and Area Optimization
+---------------------------------------------------------------------------------
+WARNING: [Synth 8-7080] Parallel synthesis criteria is not met
+---------------------------------------------------------------------------------
+Finished Cross Boundary and Area Optimization : Time (s): cpu = 00:00:12 ; elapsed = 00:00:13 . Memory (MB): peak = 2067.539 ; gain = 580.355
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Applying XDC Timing Constraints
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Applying XDC Timing Constraints : Time (s): cpu = 00:00:16 ; elapsed = 00:00:16 . Memory (MB): peak = 2067.539 ; gain = 580.355
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Timing Optimization
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Timing Optimization : Time (s): cpu = 00:00:17 ; elapsed = 00:00:18 . Memory (MB): peak = 2067.539 ; gain = 580.355
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Technology Mapping
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Technology Mapping : Time (s): cpu = 00:00:17 ; elapsed = 00:00:18 . Memory (MB): peak = 2067.539 ; gain = 580.355
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start IO Insertion
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Flattening Before IO Insertion
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Flattening Before IO Insertion
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Final Netlist Cleanup
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Final Netlist Cleanup
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished IO Insertion : Time (s): cpu = 00:00:19 ; elapsed = 00:00:20 . Memory (MB): peak = 2067.539 ; gain = 580.355
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Renaming Generated Instances
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Renaming Generated Instances : Time (s): cpu = 00:00:19 ; elapsed = 00:00:20 . Memory (MB): peak = 2067.539 ; gain = 580.355
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Rebuilding User Hierarchy
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Rebuilding User Hierarchy : Time (s): cpu = 00:00:19 ; elapsed = 00:00:20 . Memory (MB): peak = 2067.539 ; gain = 580.355
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Renaming Generated Ports
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Renaming Generated Ports : Time (s): cpu = 00:00:19 ; elapsed = 00:00:20 . Memory (MB): peak = 2067.539 ; gain = 580.355
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Handling Custom Attributes
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Handling Custom Attributes : Time (s): cpu = 00:00:19 ; elapsed = 00:00:20 . Memory (MB): peak = 2067.539 ; gain = 580.355
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Renaming Generated Nets
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Renaming Generated Nets : Time (s): cpu = 00:00:19 ; elapsed = 00:00:20 . Memory (MB): peak = 2067.539 ; gain = 580.355
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Writing Synthesis Report
+---------------------------------------------------------------------------------
+
+Report BlackBoxes: 
++------+--------------+----------+
+|      |BlackBox name |Instances |
++------+--------------+----------+
+|1     |rp_t2         |         1|
+|2     |vio_t2        |         1|
++------+--------------+----------+
+
+Report Cell Usage: 
++------+-------+------+
+|      |Cell   |Count |
++------+-------+------+
+|1     |rp_t2  |     1|
+|2     |vio_t2 |     1|
+|3     |BUFG   |     1|
+|4     |CARRY4 |    32|
+|5     |LUT1   |     8|
+|6     |LUT2   |     9|
+|7     |LUT3   |    38|
+|8     |LUT4   |    85|
+|9     |LUT5   |   102|
+|10    |LUT6   |   307|
+|11    |MUXF7  |    66|
+|12    |FDRE   |   271|
+|13    |FDSE   |     9|
+|14    |IBUF   |     2|
+|15    |OBUF   |     8|
++------+-------+------+
+---------------------------------------------------------------------------------
+Finished Writing Synthesis Report : Time (s): cpu = 00:00:19 ; elapsed = 00:00:20 . Memory (MB): peak = 2067.539 ; gain = 580.355
+---------------------------------------------------------------------------------
+Synthesis finished with 0 errors, 0 critical warnings and 1 warnings.
+Synthesis Optimization Runtime : Time (s): cpu = 00:00:13 ; elapsed = 00:00:19 . Memory (MB): peak = 2067.539 ; gain = 500.680
+Synthesis Optimization Complete : Time (s): cpu = 00:00:19 ; elapsed = 00:00:20 . Memory (MB): peak = 2067.539 ; gain = 580.355
+INFO: [Project 1-571] Translating synthesized netlist
+Netlist sorting complete. Time (s): cpu = 00:00:00 ; elapsed = 00:00:00.008 . Memory (MB): peak = 2067.539 ; gain = 0.000
+INFO: [Netlist 29-17] Analyzing 98 Unisim elements for replacement
+INFO: [Netlist 29-28] Unisim Transformation completed in 1 CPU seconds
+INFO: [Project 1-570] Preparing netlist for logic optimization
+INFO: [Opt 31-138] Pushed 0 inverter(s) to 0 load pin(s).
+Netlist sorting complete. Time (s): cpu = 00:00:00 ; elapsed = 00:00:00 . Memory (MB): peak = 2069.289 ; gain = 0.000
+INFO: [Project 1-111] Unisim Transformation Summary:
+No Unisim elements were transformed.
+
+Synth Design complete, checksum: e91b7d08
+INFO: [Common 17-83] Releasing license: Synthesis
+39 Infos, 1 Warnings, 0 Critical Warnings and 0 Errors encountered.
+synth_design completed successfully
+synth_design: Time (s): cpu = 00:00:22 ; elapsed = 00:00:24 . Memory (MB): peak = 2069.289 ; gain = 982.281
+INFO: [Common 17-1381] The checkpoint 'D:/Projects/RC_Project/vivado/scratch_t2/t2_dfx_check/t2_dfx.runs/synth_1/top_t2.dcp' has been generated.
+INFO: [runtcl-4] Executing : report_utilization -file top_t2_utilization_synth.rpt -pb top_t2_utilization_synth.pb
+INFO: [Common 17-206] Exiting Vivado at Wed Oct 14 01:29:51 2026...
+[Wed Oct 14 01:29:56 2026] synth_1 finished
+wait_on_runs: Time (s): cpu = 00:00:00 ; elapsed = 00:01:30 . Memory (MB): peak = 1105.332 ; gain = 0.000
+[Wed Oct 14 01:29:56 2026] Waiting for rm_int16_synth_1 to finish...
+
+*** Running vivado
+    with args -log rp_t2.vds -m64 -product Vivado -mode batch -messageDb vivado.pb -notrace -source rp_t2.tcl
+
+
+
+****** Vivado v2022.2 (64-bit)
+  **** SW Build 3671981 on Fri Oct 14 05:00:03 MDT 2022
+  **** IP Build 3669848 on Fri Oct 14 08:30:02 MDT 2022
+    ** Copyright 1986-2022 Xilinx, Inc. All Rights Reserved.
+
+source rp_t2.tcl -notrace
+create_project: Time (s): cpu = 00:00:05 ; elapsed = 00:00:06 . Memory (MB): peak = 1041.703 ; gain = 155.691
+Command: synth_design -top rp_t2 -part xc7z020clg484-1 -mode out_of_context
+Starting synth_design
+Attempting to get a license for feature 'Synthesis' and/or device 'xc7z020'
+INFO: [Common 17-349] Got license for feature 'Synthesis' and/or device 'xc7z020'
+INFO: [Synth 8-7079] Multithreading enabled for synth_design using a maximum of 2 processes.
+INFO: [Synth 8-7078] Launching helper process for spawning children vivado processes
+INFO: [Synth 8-7075] Helper process launched with PID 15192
+INFO: [Synth 8-11241] undeclared symbol 'REGCCE', assumed default net type 'wire' [C:/Xilinx/Vivado/2022.2/data/verilog/src/unimacro/BRAM_SINGLE_MACRO.v:2170]
+---------------------------------------------------------------------------------
+Starting Synthesize : Time (s): cpu = 00:00:05 ; elapsed = 00:00:05 . Memory (MB): peak = 1477.359 ; gain = 410.793
+---------------------------------------------------------------------------------
+INFO: [Synth 8-6157] synthesizing module 'rp_t2' [D:/Projects/RC_Project/rtl/t2/rm/rm_int16.v:7]
+INFO: [Synth 8-6157] synthesizing module 'array' [D:/Projects/RC_Project/rtl/array.v:20]
+	Parameter DATA_W bound to: 16 - type: integer 
+	Parameter ACC_W bound to: 48 - type: integer 
+INFO: [Synth 8-6157] synthesizing module 'pe' [D:/Projects/RC_Project/rtl/pe.v:20]
+	Parameter DATA_W bound to: 16 - type: integer 
+	Parameter ACC_W bound to: 48 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'pe' (0#1) [D:/Projects/RC_Project/rtl/pe.v:20]
+INFO: [Synth 8-6155] done synthesizing module 'array' (0#1) [D:/Projects/RC_Project/rtl/array.v:20]
+INFO: [Synth 8-6157] synthesizing module 'rm_readout' [D:/Projects/RC_Project/rtl/t2/rm/rm_common.v:35]
+	Parameter ACC_W bound to: 48 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'rm_readout' (0#1) [D:/Projects/RC_Project/rtl/t2/rm/rm_common.v:35]
+INFO: [Synth 8-6157] synthesizing module 'rm_badge' [D:/Projects/RC_Project/rtl/t2/rm/rm_common.v:91]
+	Parameter ID bound to: 8'b00010110 
+	Parameter PAT bound to: 4'b1111 
+	Parameter PRESCALE_W bound to: 24 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'rm_badge' (0#1) [D:/Projects/RC_Project/rtl/t2/rm/rm_common.v:91]
+INFO: [Synth 8-6155] done synthesizing module 'rp_t2' (0#1) [D:/Projects/RC_Project/rtl/t2/rm/rm_int16.v:7]
+---------------------------------------------------------------------------------
+Finished Synthesize : Time (s): cpu = 00:00:06 ; elapsed = 00:00:07 . Memory (MB): peak = 1568.723 ; gain = 502.156
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Constraint Validation : Time (s): cpu = 00:00:07 ; elapsed = 00:00:07 . Memory (MB): peak = 1568.723 ; gain = 502.156
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Loading Part and Timing Information
+---------------------------------------------------------------------------------
+Loading part: xc7z020clg484-1
+---------------------------------------------------------------------------------
+Finished Loading Part and Timing Information : Time (s): cpu = 00:00:07 ; elapsed = 00:00:07 . Memory (MB): peak = 1568.723 ; gain = 502.156
+---------------------------------------------------------------------------------
+INFO: [Device 21-403] Loading part xc7z020clg484-1
+INFO: [Synth 8-802] inferred FSM for state register 'pat_q_reg' in module 'rm_badge'
+INFO: [Synth 8-6159] Found Keep on FSM register 'pat_q_reg' in module 'rm_badge', re-encoding will not be performed
+---------------------------------------------------------------------------------------------------
+                   State |                     New Encoding |                Previous Encoding 
+---------------------------------------------------------------------------------------------------
+                  iSTATE |                             0000 |                             0000
+                 iSTATE0 |                             1111 |                             1111
+*
+---------------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished RTL Optimization Phase 2 : Time (s): cpu = 00:00:07 ; elapsed = 00:00:07 . Memory (MB): peak = 1568.723 ; gain = 502.156
+---------------------------------------------------------------------------------
+No constraint files found.
+---------------------------------------------------------------------------------
+Start RTL Component Statistics 
+---------------------------------------------------------------------------------
+Detailed RTL Component Info : 
++---Registers : 
+	               64 Bit    Registers := 2     
+	               48 Bit    Registers := 16    
+	               32 Bit    Registers := 1     
+	               16 Bit    Registers := 32    
+	                8 Bit    Registers := 1     
+	                1 Bit    Registers := 2     
++---Muxes : 
+	   2 Input   32 Bit        Muxes := 3     
+	   2 Input    8 Bit        Muxes := 1     
+	   2 Input    4 Bit        Muxes := 1     
+	   2 Input    1 Bit        Muxes := 16    
+---------------------------------------------------------------------------------
+Finished RTL Component Statistics 
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Part Resource Summary
+---------------------------------------------------------------------------------
+Part Resources:
+DSPs: 220 (col length:60)
+BRAMs: 280 (col length: RAMB18 60 RAMB36 30)
+---------------------------------------------------------------------------------
+Finished Part Resource Summary
+---------------------------------------------------------------------------------
+No constraint files found.
+---------------------------------------------------------------------------------
+Start Cross Boundary and Area Optimization
+---------------------------------------------------------------------------------
+WARNING: [Synth 8-7080] Parallel synthesis criteria is not met
+DSP Report: Generating DSP u_array/row[0].col[0].u_pe/acc_reg, operation Mode is: (P+A2*B2)'.
+DSP Report: register north_r_reg is absorbed into DSP u_array/row[0].col[0].u_pe/acc_reg.
+DSP Report: register west_r_reg is absorbed into DSP u_array/row[0].col[0].u_pe/acc_reg.
+DSP Report: register u_array/row[0].col[0].u_pe/acc_reg is absorbed into DSP u_array/row[0].col[0].u_pe/acc_reg.
+DSP Report: operator u_array/row[0].col[0].u_pe/acc0 is absorbed into DSP u_array/row[0].col[0].u_pe/acc_reg.
+DSP Report: operator u_array/row[0].col[0].u_pe/prod is absorbed into DSP u_array/row[0].col[0].u_pe/acc_reg.
+DSP Report: Generating DSP u_array/row[0].col[1].u_pe/acc_reg, operation Mode is: (P+A''*B2)'.
+DSP Report: register u_array/row[0].col[1].u_pe/acc_reg is absorbed into DSP u_array/row[0].col[1].u_pe/acc_reg.
+DSP Report: register west_r_reg is absorbed into DSP u_array/row[0].col[1].u_pe/acc_reg.
+DSP Report: register u_array/row[0].col[0].u_pe/a_out_reg is absorbed into DSP u_array/row[0].col[1].u_pe/acc_reg.
+DSP Report: register u_array/row[0].col[1].u_pe/acc_reg is absorbed into DSP u_array/row[0].col[1].u_pe/acc_reg.
+DSP Report: operator u_array/row[0].col[1].u_pe/acc0 is absorbed into DSP u_array/row[0].col[1].u_pe/acc_reg.
+DSP Report: operator u_array/row[0].col[1].u_pe/prod is absorbed into DSP u_array/row[0].col[1].u_pe/acc_reg.
+DSP Report: Generating DSP u_array/row[0].col[2].u_pe/acc_reg, operation Mode is: (P+A''*B2)'.
+DSP Report: register u_array/row[0].col[2].u_pe/acc_reg is absorbed into DSP u_array/row[0].col[2].u_pe/acc_reg.
+DSP Report: register u_array/row[0].col[0].u_pe/a_out_reg is absorbed into DSP u_array/row[0].col[2].u_pe/acc_reg.
+DSP Report: register u_array/row[0].col[1].u_pe/a_out_reg is absorbed into DSP u_array/row[0].col[2].u_pe/acc_reg.
+DSP Report: register u_array/row[0].col[2].u_pe/acc_reg is absorbed into DSP u_array/row[0].col[2].u_pe/acc_reg.
+DSP Report: operator u_array/row[0].col[2].u_pe/acc0 is absorbed into DSP u_array/row[0].col[2].u_pe/acc_reg.
+DSP Report: operator u_array/row[0].col[2].u_pe/prod is absorbed into DSP u_array/row[0].col[2].u_pe/acc_reg.
+DSP Report: Generating DSP u_array/row[0].col[3].u_pe/acc_reg, operation Mode is: (P+ACIN''*B2)'.
+DSP Report: register u_array/row[0].col[3].u_pe/acc_reg is absorbed into DSP u_array/row[0].col[3].u_pe/acc_reg.
+DSP Report: register u_array/row[0].col[1].u_pe/a_out_reg is absorbed into DSP u_array/row[0].col[3].u_pe/acc_reg.
+DSP Report: register u_array/row[0].col[2].u_pe/a_out_reg is absorbed into DSP u_array/row[0].col[3].u_pe/acc_reg.
+DSP Report: register u_array/row[0].col[3].u_pe/acc_reg is absorbed into DSP u_array/row[0].col[3].u_pe/acc_reg.
+DSP Report: operator u_array/row[0].col[3].u_pe/acc0 is absorbed into DSP u_array/row[0].col[3].u_pe/acc_reg.
+DSP Report: operator u_array/row[0].col[3].u_pe/prod is absorbed into DSP u_array/row[0].col[3].u_pe/acc_reg.
+DSP Report: Generating DSP u_array/row[1].col[0].u_pe/acc_reg, operation Mode is: (P+A2*B'')'.
+DSP Report: register north_r_reg is absorbed into DSP u_array/row[1].col[0].u_pe/acc_reg.
+DSP Report: register u_array/row[0].col[0].u_pe/b_out_reg is absorbed into DSP u_array/row[1].col[0].u_pe/acc_reg.
+DSP Report: register u_array/row[1].col[0].u_pe/acc_reg is absorbed into DSP u_array/row[1].col[0].u_pe/acc_reg.
+DSP Report: register u_array/row[1].col[0].u_pe/acc_reg is absorbed into DSP u_array/row[1].col[0].u_pe/acc_reg.
+DSP Report: operator u_array/row[1].col[0].u_pe/acc0 is absorbed into DSP u_array/row[1].col[0].u_pe/acc_reg.
+DSP Report: operator u_array/row[1].col[0].u_pe/prod is absorbed into DSP u_array/row[1].col[0].u_pe/acc_reg.
+DSP Report: Generating DSP u_array/row[1].col[1].u_pe/acc_reg, operation Mode is: (P+A''*B'')'.
+DSP Report: register u_array/row[1].col[1].u_pe/acc_reg is absorbed into DSP u_array/row[1].col[1].u_pe/acc_reg.
+DSP Report: register u_array/row[0].col[1].u_pe/b_out_reg is absorbed into DSP u_array/row[1].col[1].u_pe/acc_reg.
+DSP Report: register u_array/row[1].col[1].u_pe/acc_reg is absorbed into DSP u_array/row[1].col[1].u_pe/acc_reg.
+DSP Report: register u_array/row[1].col[0].u_pe/a_out_reg is absorbed into DSP u_array/row[1].col[1].u_pe/acc_reg.
+DSP Report: register u_array/row[1].col[1].u_pe/acc_reg is absorbed into DSP u_array/row[1].col[1].u_pe/acc_reg.
+DSP Report: operator u_array/row[1].col[1].u_pe/acc0 is absorbed into DSP u_array/row[1].col[1].u_pe/acc_reg.
+DSP Report: operator u_array/row[1].col[1].u_pe/prod is absorbed into DSP u_array/row[1].col[1].u_pe/acc_reg.
+DSP Report: Generating DSP u_array/row[1].col[2].u_pe/acc_reg, operation Mode is: (P+A''*B'')'.
+DSP Report: register u_array/row[1].col[2].u_pe/acc_reg is absorbed into DSP u_array/row[1].col[2].u_pe/acc_reg.
+DSP Report: register u_array/row[0].col[2].u_pe/b_out_reg is absorbed into DSP u_array/row[1].col[2].u_pe/acc_reg.
+DSP Report: register u_array/row[1].col[0].u_pe/a_out_reg is absorbed into DSP u_array/row[1].col[2].u_pe/acc_reg.
+DSP Report: register u_array/row[1].col[1].u_pe/a_out_reg is absorbed into DSP u_array/row[1].col[2].u_pe/acc_reg.
+DSP Report: register u_array/row[1].col[2].u_pe/acc_reg is absorbed into DSP u_array/row[1].col[2].u_pe/acc_reg.
+DSP Report: operator u_array/row[1].col[2].u_pe/acc0 is absorbed into DSP u_array/row[1].col[2].u_pe/acc_reg.
+DSP Report: operator u_array/row[1].col[2].u_pe/prod is absorbed into DSP u_array/row[1].col[2].u_pe/acc_reg.
+DSP Report: Generating DSP u_array/row[1].col[3].u_pe/acc_reg, operation Mode is: (P+ACIN''*B'')'.
+DSP Report: register u_array/row[1].col[3].u_pe/acc_reg is absorbed into DSP u_array/row[1].col[3].u_pe/acc_reg.
+DSP Report: register u_array/row[0].col[3].u_pe/b_out_reg is absorbed into DSP u_array/row[1].col[3].u_pe/acc_reg.
+DSP Report: register u_array/row[1].col[1].u_pe/a_out_reg is absorbed into DSP u_array/row[1].col[3].u_pe/acc_reg.
+DSP Report: register u_array/row[1].col[2].u_pe/a_out_reg is absorbed into DSP u_array/row[1].col[3].u_pe/acc_reg.
+DSP Report: register u_array/row[1].col[3].u_pe/acc_reg is absorbed into DSP u_array/row[1].col[3].u_pe/acc_reg.
+DSP Report: operator u_array/row[1].col[3].u_pe/acc0 is absorbed into DSP u_array/row[1].col[3].u_pe/acc_reg.
+DSP Report: operator u_array/row[1].col[3].u_pe/prod is absorbed into DSP u_array/row[1].col[3].u_pe/acc_reg.
+DSP Report: Generating DSP u_array/row[2].col[0].u_pe/acc_reg, operation Mode is: (P+A2*B'')'.
+DSP Report: register u_array/row[0].col[0].u_pe/b_out_reg is absorbed into DSP u_array/row[2].col[0].u_pe/acc_reg.
+DSP Report: register u_array/row[1].col[0].u_pe/b_out_reg is absorbed into DSP u_array/row[2].col[0].u_pe/acc_reg.
+DSP Report: register u_array/row[2].col[0].u_pe/acc_reg is absorbed into DSP u_array/row[2].col[0].u_pe/acc_reg.
+DSP Report: register u_array/row[2].col[0].u_pe/acc_reg is absorbed into DSP u_array/row[2].col[0].u_pe/acc_reg.
+DSP Report: operator u_array/row[2].col[0].u_pe/acc0 is absorbed into DSP u_array/row[2].col[0].u_pe/acc_reg.
+DSP Report: operator u_array/row[2].col[0].u_pe/prod is absorbed into DSP u_array/row[2].col[0].u_pe/acc_reg.
+DSP Report: Generating DSP u_array/row[2].col[1].u_pe/acc_reg, operation Mode is: (P+A''*B'')'.
+DSP Report: register u_array/row[0].col[1].u_pe/b_out_reg is absorbed into DSP u_array/row[2].col[1].u_pe/acc_reg.
+DSP Report: register u_array/row[1].col[1].u_pe/b_out_reg is absorbed into DSP u_array/row[2].col[1].u_pe/acc_reg.
+DSP Report: register u_array/row[2].col[1].u_pe/acc_reg is absorbed into DSP u_array/row[2].col[1].u_pe/acc_reg.
+DSP Report: register u_array/row[2].col[0].u_pe/a_out_reg is absorbed into DSP u_array/row[2].col[1].u_pe/acc_reg.
+DSP Report: register u_array/row[2].col[1].u_pe/acc_reg is absorbed into DSP u_array/row[2].col[1].u_pe/acc_reg.
+DSP Report: operator u_array/row[2].col[1].u_pe/acc0 is absorbed into DSP u_array/row[2].col[1].u_pe/acc_reg.
+DSP Report: operator u_array/row[2].col[1].u_pe/prod is absorbed into DSP u_array/row[2].col[1].u_pe/acc_reg.
+DSP Report: Generating DSP u_array/row[2].col[2].u_pe/acc_reg, operation Mode is: (P+A''*B'')'.
+DSP Report: register u_array/row[0].col[2].u_pe/b_out_reg is absorbed into DSP u_array/row[2].col[2].u_pe/acc_reg.
+DSP Report: register u_array/row[1].col[2].u_pe/b_out_reg is absorbed into DSP u_array/row[2].col[2].u_pe/acc_reg.
+DSP Report: register u_array/row[2].col[0].u_pe/a_out_reg is absorbed into DSP u_array/row[2].col[2].u_pe/acc_reg.
+DSP Report: register u_array/row[2].col[1].u_pe/a_out_reg is absorbed into DSP u_array/row[2].col[2].u_pe/acc_reg.
+DSP Report: register u_array/row[2].col[2].u_pe/acc_reg is absorbed into DSP u_array/row[2].col[2].u_pe/acc_reg.
+DSP Report: operator u_array/row[2].col[2].u_pe/acc0 is absorbed into DSP u_array/row[2].col[2].u_pe/acc_reg.
+DSP Report: operator u_array/row[2].col[2].u_pe/prod is absorbed into DSP u_array/row[2].col[2].u_pe/acc_reg.
+DSP Report: Generating DSP u_array/row[2].col[3].u_pe/acc_reg, operation Mode is: (P+ACIN''*B'')'.
+DSP Report: register u_array/row[0].col[3].u_pe/b_out_reg is absorbed into DSP u_array/row[2].col[3].u_pe/acc_reg.
+DSP Report: register u_array/row[1].col[3].u_pe/b_out_reg is absorbed into DSP u_array/row[2].col[3].u_pe/acc_reg.
+DSP Report: register u_array/row[2].col[1].u_pe/a_out_reg is absorbed into DSP u_array/row[2].col[3].u_pe/acc_reg.
+DSP Report: register u_array/row[2].col[2].u_pe/a_out_reg is absorbed into DSP u_array/row[2].col[3].u_pe/acc_reg.
+DSP Report: register u_array/row[2].col[3].u_pe/acc_reg is absorbed into DSP u_array/row[2].col[3].u_pe/acc_reg.
+DSP Report: operator u_array/row[2].col[3].u_pe/acc0 is absorbed into DSP u_array/row[2].col[3].u_pe/acc_reg.
+DSP Report: operator u_array/row[2].col[3].u_pe/prod is absorbed into DSP u_array/row[2].col[3].u_pe/acc_reg.
+DSP Report: Generating DSP u_array/row[3].col[0].u_pe/acc_reg, operation Mode is: (P+A2*BCIN'')'.
+DSP Report: register u_array/row[1].col[0].u_pe/b_out_reg is absorbed into DSP u_array/row[3].col[0].u_pe/acc_reg.
+DSP Report: register u_array/row[2].col[0].u_pe/b_out_reg is absorbed into DSP u_array/row[3].col[0].u_pe/acc_reg.
+DSP Report: register u_array/row[3].col[0].u_pe/acc_reg is absorbed into DSP u_array/row[3].col[0].u_pe/acc_reg.
+DSP Report: register u_array/row[3].col[0].u_pe/acc_reg is absorbed into DSP u_array/row[3].col[0].u_pe/acc_reg.
+DSP Report: operator u_array/row[3].col[0].u_pe/acc0 is absorbed into DSP u_array/row[3].col[0].u_pe/acc_reg.
+DSP Report: operator u_array/row[3].col[0].u_pe/prod is absorbed into DSP u_array/row[3].col[0].u_pe/acc_reg.
+DSP Report: Generating DSP u_array/row[3].col[1].u_pe/acc_reg, operation Mode is: (P+A''*B'')'.
+DSP Report: register u_array/row[1].col[1].u_pe/b_out_reg is absorbed into DSP u_array/row[3].col[1].u_pe/acc_reg.
+DSP Report: register u_array/row[2].col[1].u_pe/b_out_reg is absorbed into DSP u_array/row[3].col[1].u_pe/acc_reg.
+DSP Report: register u_array/row[3].col[1].u_pe/acc_reg is absorbed into DSP u_array/row[3].col[1].u_pe/acc_reg.
+DSP Report: register u_array/row[3].col[0].u_pe/a_out_reg is absorbed into DSP u_array/row[3].col[1].u_pe/acc_reg.
+DSP Report: register u_array/row[3].col[1].u_pe/acc_reg is absorbed into DSP u_array/row[3].col[1].u_pe/acc_reg.
+DSP Report: operator u_array/row[3].col[1].u_pe/acc0 is absorbed into DSP u_array/row[3].col[1].u_pe/acc_reg.
+DSP Report: operator u_array/row[3].col[1].u_pe/prod is absorbed into DSP u_array/row[3].col[1].u_pe/acc_reg.
+DSP Report: Generating DSP u_array/row[3].col[2].u_pe/acc_reg, operation Mode is: (P+A''*BCIN'')'.
+DSP Report: register u_array/row[1].col[2].u_pe/b_out_reg is absorbed into DSP u_array/row[3].col[2].u_pe/acc_reg.
+DSP Report: register u_array/row[2].col[2].u_pe/b_out_reg is absorbed into DSP u_array/row[3].col[2].u_pe/acc_reg.
+DSP Report: register u_array/row[3].col[0].u_pe/a_out_reg is absorbed into DSP u_array/row[3].col[2].u_pe/acc_reg.
+DSP Report: register u_array/row[3].col[1].u_pe/a_out_reg is absorbed into DSP u_array/row[3].col[2].u_pe/acc_reg.
+DSP Report: register u_array/row[3].col[2].u_pe/acc_reg is absorbed into DSP u_array/row[3].col[2].u_pe/acc_reg.
+DSP Report: operator u_array/row[3].col[2].u_pe/acc0 is absorbed into DSP u_array/row[3].col[2].u_pe/acc_reg.
+DSP Report: operator u_array/row[3].col[2].u_pe/prod is absorbed into DSP u_array/row[3].col[2].u_pe/acc_reg.
+DSP Report: Generating DSP u_array/row[3].col[3].u_pe/acc_reg, operation Mode is: (P+ACIN''*B'')'.
+DSP Report: register u_array/row[1].col[3].u_pe/b_out_reg is absorbed into DSP u_array/row[3].col[3].u_pe/acc_reg.
+DSP Report: register u_array/row[2].col[3].u_pe/b_out_reg is absorbed into DSP u_array/row[3].col[3].u_pe/acc_reg.
+DSP Report: register u_array/row[3].col[1].u_pe/a_out_reg is absorbed into DSP u_array/row[3].col[3].u_pe/acc_reg.
+DSP Report: register u_array/row[3].col[2].u_pe/a_out_reg is absorbed into DSP u_array/row[3].col[3].u_pe/acc_reg.
+DSP Report: register u_array/row[3].col[3].u_pe/acc_reg is absorbed into DSP u_array/row[3].col[3].u_pe/acc_reg.
+DSP Report: operator u_array/row[3].col[3].u_pe/acc0 is absorbed into DSP u_array/row[3].col[3].u_pe/acc_reg.
+DSP Report: operator u_array/row[3].col[3].u_pe/prod is absorbed into DSP u_array/row[3].col[3].u_pe/acc_reg.
+---------------------------------------------------------------------------------
+Finished Cross Boundary and Area Optimization : Time (s): cpu = 00:00:14 ; elapsed = 00:00:15 . Memory (MB): peak = 1848.352 ; gain = 781.785
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start ROM, RAM, DSP, Shift Register and Retiming Reporting
+---------------------------------------------------------------------------------
+
+DSP: Preliminary Mapping Report (see note below. The ' indicates corresponding REG is set)
++------------+-----------------+--------+--------+--------+--------+--------+------+------+------+------+-------+------+------+
+|Module Name | DSP Mapping     | A Size | B Size | C Size | D Size | P Size | AREG | BREG | CREG | DREG | ADREG | MREG | PREG | 
++------------+-----------------+--------+--------+--------+--------+--------+------+------+------+------+-------+------+------+
+|rp_t2       | (P+A2*B2)'      | 16     | 16     | -      | -      | 48     | 1    | 1    | -    | -    | -     | 0    | 1    | 
+|rp_t2       | (P+A''*B2)'     | 16     | 16     | -      | -      | 48     | 2    | 1    | -    | -    | -     | 0    | 1    | 
+|rp_t2       | (P+A''*B2)'     | 16     | 16     | -      | -      | 48     | 2    | 1    | -    | -    | -     | 0    | 1    | 
+|rp_t2       | (P+ACIN''*B2)'  | 16     | 16     | -      | -      | 48     | 2    | 1    | -    | -    | -     | 0    | 1    | 
+|rp_t2       | (P+A2*B'')'     | 16     | 16     | -      | -      | 48     | 1    | 2    | -    | -    | -     | 0    | 1    | 
+|rp_t2       | (P+A''*B'')'    | 16     | 16     | -      | -      | 48     | 2    | 2    | -    | -    | -     | 0    | 1    | 
+|rp_t2       | (P+A''*B'')'    | 16     | 16     | -      | -      | 48     | 2    | 2    | -    | -    | -     | 0    | 1    | 
+|rp_t2       | (P+ACIN''*B'')' | 16     | 16     | -      | -      | 48     | 2    | 2    | -    | -    | -     | 0    | 1    | 
+|rp_t2       | (P+A2*B'')'     | 16     | 16     | -      | -      | 48     | 1    | 2    | -    | -    | -     | 0    | 1    | 
+|rp_t2       | (P+A''*B'')'    | 16     | 16     | -      | -      | 48     | 2    | 2    | -    | -    | -     | 0    | 1    | 
+|rp_t2       | (P+A''*B'')'    | 16     | 16     | -      | -      | 48     | 2    | 2    | -    | -    | -     | 0    | 1    | 
+|rp_t2       | (P+ACIN''*B'')' | 16     | 16     | -      | -      | 48     | 2    | 2    | -    | -    | -     | 0    | 1    | 
+|rp_t2       | (P+A2*BCIN'')'  | 16     | 16     | -      | -      | 48     | 1    | 2    | -    | -    | -     | 0    | 1    | 
+|rp_t2       | (P+A''*B'')'    | 16     | 16     | -      | -      | 48     | 2    | 2    | -    | -    | -     | 0    | 1    | 
+|rp_t2       | (P+A''*BCIN'')' | 16     | 16     | -      | -      | 48     | 2    | 2    | -    | -    | -     | 0    | 1    | 
+|rp_t2       | (P+ACIN''*B'')' | 16     | 16     | -      | -      | 48     | 2    | 2    | -    | -    | -     | 0    | 1    | 
++------------+-----------------+--------+--------+--------+--------+--------+------+------+------+------+-------+------+------+
+
+Note: The table above is a preliminary report that shows the DSPs inferred at the current stage of the synthesis flow. Some DSP may be reimplemented as non DSP primitives later in the synthesis flow. Multiple instantiated DSPs are reported only once.
+---------------------------------------------------------------------------------
+Finished ROM, RAM, DSP, Shift Register and Retiming Reporting
+---------------------------------------------------------------------------------
+No constraint files found.
+---------------------------------------------------------------------------------
+Start Timing Optimization
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Timing Optimization : Time (s): cpu = 00:00:14 ; elapsed = 00:00:15 . Memory (MB): peak = 1848.352 ; gain = 781.785
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Technology Mapping
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Technology Mapping : Time (s): cpu = 00:00:14 ; elapsed = 00:00:15 . Memory (MB): peak = 1848.352 ; gain = 781.785
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start IO Insertion
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Flattening Before IO Insertion
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Flattening Before IO Insertion
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Final Netlist Cleanup
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Final Netlist Cleanup
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished IO Insertion : Time (s): cpu = 00:00:17 ; elapsed = 00:00:19 . Memory (MB): peak = 1848.352 ; gain = 781.785
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Renaming Generated Instances
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Renaming Generated Instances : Time (s): cpu = 00:00:17 ; elapsed = 00:00:19 . Memory (MB): peak = 1848.352 ; gain = 781.785
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Rebuilding User Hierarchy
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Rebuilding User Hierarchy : Time (s): cpu = 00:00:17 ; elapsed = 00:00:19 . Memory (MB): peak = 1848.352 ; gain = 781.785
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Renaming Generated Ports
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Renaming Generated Ports : Time (s): cpu = 00:00:17 ; elapsed = 00:00:19 . Memory (MB): peak = 1848.352 ; gain = 781.785
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Handling Custom Attributes
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Handling Custom Attributes : Time (s): cpu = 00:00:17 ; elapsed = 00:00:19 . Memory (MB): peak = 1848.352 ; gain = 781.785
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Renaming Generated Nets
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Renaming Generated Nets : Time (s): cpu = 00:00:17 ; elapsed = 00:00:19 . Memory (MB): peak = 1848.352 ; gain = 781.785
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Writing Synthesis Report
+---------------------------------------------------------------------------------
+
+DSP Final Report (the ' indicates corresponding REG is set)
++------------+-----------------+--------+--------+--------+--------+--------+------+------+------+------+-------+------+------+
+|Module Name | DSP Mapping     | A Size | B Size | C Size | D Size | P Size | AREG | BREG | CREG | DREG | ADREG | MREG | PREG | 
++------------+-----------------+--------+--------+--------+--------+--------+------+------+------+------+-------+------+------+
+|rp_t2       | (P+A'*B')'      | 30     | 18     | -      | -      | 48     | 1    | 1    | -    | -    | -     | 0    | 1    | 
+|rp_t2       | (P+A''*B')'     | 30     | 18     | -      | -      | 48     | 2    | 1    | -    | -    | -     | 0    | 1    | 
+|rp_t2       | (P+A''*B')'     | 30     | 18     | -      | -      | 48     | 2    | 1    | -    | -    | -     | 0    | 1    | 
+|rp_t2       | (P+A''*B')'     | 0      | 18     | -      | -      | 48     | 2    | 1    | -    | -    | -     | 0    | 1    | 
+|rp_t2       | (P+A'*B'')'     | 30     | 18     | -      | -      | 48     | 1    | 2    | -    | -    | -     | 0    | 1    | 
+|rp_t2       | (P+A''*B'')'    | 30     | 18     | -      | -      | 48     | 2    | 2    | -    | -    | -     | 0    | 1    | 
+|rp_t2       | (P+A''*B'')'    | 30     | 18     | -      | -      | 48     | 2    | 2    | -    | -    | -     | 0    | 1    | 
+|rp_t2       | (P+(A'*B')')'   | 0      | 18     | -      | -      | 48     | 1    | 1    | -    | -    | -     | 1    | 1    | 
+|rp_t2       | (P+A'*B'')'     | 30     | 18     | -      | -      | 48     | 1    | 2    | -    | -    | -     | 0    | 1    | 
+|rp_t2       | (P+A''*B'')'    | 30     | 18     | -      | -      | 48     | 2    | 2    | -    | -    | -     | 0    | 1    | 
+|rp_t2       | (P+(A''*B'')')' | 30     | 18     | -      | -      | 48     | 2    | 2    | -    | -    | -     | 1    | 1    | 
+|rp_t2       | (P+(A'*B'')')'  | 0      | 18     | -      | -      | 48     | 1    | 2    | -    | -    | -     | 1    | 1    | 
+|rp_t2       | (P+A'*B'')'     | 30     | 0      | -      | -      | 48     | 1    | 2    | -    | -    | -     | 0    | 1    | 
+|rp_t2       | (P+A''*B'')'    | 30     | 18     | -      | -      | 48     | 2    | 2    | -    | -    | -     | 0    | 1    | 
+|rp_t2       | (P+(A''*B')')'  | 30     | 0      | -      | -      | 48     | 2    | 1    | -    | -    | -     | 1    | 1    | 
+|rp_t2       | (P+(A'*B'')')'  | 0      | 18     | -      | -      | 48     | 1    | 2    | -    | -    | -     | 1    | 1    | 
++------------+-----------------+--------+--------+--------+--------+--------+------+------+------+------+-------+------+------+
+
+
+Report BlackBoxes: 
++-+--------------+----------+
+| |BlackBox name |Instances |
++-+--------------+----------+
++-+--------------+----------+
+
+Report Cell Usage: 
++------+--------+------+
+|      |Cell    |Count |
++------+--------+------+
+|1     |CARRY4  |    12|
+|2     |DSP48E1 |    16|
+|3     |LUT1    |     2|
+|4     |LUT2    |     2|
+|5     |LUT4    |     4|
+|6     |LUT5    |    67|
+|7     |LUT6    |   196|
+|8     |MUXF7   |    96|
+|9     |FDRE    |   166|
++------+--------+------+
+
+Report Instance Areas: 
++------+-------------------------+-----------+------+
+|      |Instance                 |Module     |Cells |
++------+-------------------------+-----------+------+
+|1     |top                      |           |   561|
+|2     |  u_array                |array      |   359|
+|3     |    \row[0].col[0].u_pe  |pe         |     1|
+|4     |    \row[0].col[1].u_pe  |pe_0       |    18|
+|5     |    \row[0].col[2].u_pe  |pe_1       |     1|
+|6     |    \row[0].col[3].u_pe  |pe_2       |   118|
+|7     |    \row[1].col[0].u_pe  |pe_3       |     1|
+|8     |    \row[1].col[1].u_pe  |pe_4       |     1|
+|9     |    \row[1].col[2].u_pe  |pe_5       |     1|
+|10    |    \row[1].col[3].u_pe  |pe_6       |    49|
+|11    |    \row[2].col[0].u_pe  |pe_7       |     1|
+|12    |    \row[2].col[1].u_pe  |pe_8       |     1|
+|13    |    \row[2].col[2].u_pe  |pe_9       |     1|
+|14    |    \row[2].col[3].u_pe  |pe_10      |   112|
+|15    |    \row[3].col[0].u_pe  |pe_11      |     1|
+|16    |    \row[3].col[1].u_pe  |pe_12      |     1|
+|17    |    \row[3].col[2].u_pe  |pe_13      |     1|
+|18    |    \row[3].col[3].u_pe  |pe_14      |    51|
+|19    |  u_badge                |rm_badge   |    50|
+|20    |  u_readout              |rm_readout |    71|
++------+-------------------------+-----------+------+
+---------------------------------------------------------------------------------
+Finished Writing Synthesis Report : Time (s): cpu = 00:00:17 ; elapsed = 00:00:19 . Memory (MB): peak = 1848.352 ; gain = 781.785
+---------------------------------------------------------------------------------
+Synthesis finished with 0 errors, 0 critical warnings and 1 warnings.
+Synthesis Optimization Runtime : Time (s): cpu = 00:00:17 ; elapsed = 00:00:19 . Memory (MB): peak = 1848.352 ; gain = 781.785
+Synthesis Optimization Complete : Time (s): cpu = 00:00:17 ; elapsed = 00:00:19 . Memory (MB): peak = 1848.352 ; gain = 781.785
+INFO: [Project 1-571] Translating synthesized netlist
+Netlist sorting complete. Time (s): cpu = 00:00:00 ; elapsed = 00:00:00.021 . Memory (MB): peak = 1848.352 ; gain = 0.000
+INFO: [Netlist 29-17] Analyzing 124 Unisim elements for replacement
+INFO: [Netlist 29-28] Unisim Transformation completed in 0 CPU seconds
+INFO: [Project 1-570] Preparing netlist for logic optimization
+INFO: [Opt 31-138] Pushed 0 inverter(s) to 0 load pin(s).
+Netlist sorting complete. Time (s): cpu = 00:00:00 ; elapsed = 00:00:00.001 . Memory (MB): peak = 1904.312 ; gain = 0.000
+INFO: [Project 1-111] Unisim Transformation Summary:
+No Unisim elements were transformed.
+
+Synth Design complete, checksum: c13a87a2
+INFO: [Common 17-83] Releasing license: Synthesis
+25 Infos, 1 Warnings, 0 Critical Warnings and 0 Errors encountered.
+synth_design completed successfully
+synth_design: Time (s): cpu = 00:00:19 ; elapsed = 00:00:21 . Memory (MB): peak = 1904.312 ; gain = 862.609
+INFO: [Coretcl 2-1174] Renamed 19 cell refs.
+INFO: [Timing 38-35] Done setting XDC timing constraints.
+INFO: [Common 17-1381] The checkpoint 'D:/Projects/RC_Project/vivado/scratch_t2/t2_dfx_check/t2_dfx.runs/rm_int16_synth_1/rp_t2.dcp' has been generated.
+write_checkpoint: Time (s): cpu = 00:00:07 ; elapsed = 00:00:07 . Memory (MB): peak = 2214.254 ; gain = 309.941
+INFO: [runtcl-4] Executing : report_utilization -file rp_t2_utilization_synth.rpt -pb rp_t2_utilization_synth.pb
+INFO: [Common 17-206] Exiting Vivado at Wed Oct 14 01:29:05 2026...
+[Wed Oct 14 01:29:56 2026] rm_int16_synth_1 finished
+[Wed Oct 14 01:29:56 2026] Waiting for rm_int8_synth_1 to finish...
+
+*** Running vivado
+    with args -log rp_t2.vds -m64 -product Vivado -mode batch -messageDb vivado.pb -notrace -source rp_t2.tcl
+
+
+
+****** Vivado v2022.2 (64-bit)
+  **** SW Build 3671981 on Fri Oct 14 05:00:03 MDT 2022
+  **** IP Build 3669848 on Fri Oct 14 08:30:02 MDT 2022
+    ** Copyright 1986-2022 Xilinx, Inc. All Rights Reserved.
+
+source rp_t2.tcl -notrace
+create_project: Time (s): cpu = 00:00:05 ; elapsed = 00:00:06 . Memory (MB): peak = 1046.395 ; gain = 161.727
+Command: synth_design -top rp_t2 -part xc7z020clg484-1 -mode out_of_context
+Starting synth_design
+Attempting to get a license for feature 'Synthesis' and/or device 'xc7z020'
+INFO: [Common 17-349] Got license for feature 'Synthesis' and/or device 'xc7z020'
+INFO: [Synth 8-7079] Multithreading enabled for synth_design using a maximum of 2 processes.
+INFO: [Synth 8-7078] Launching helper process for spawning children vivado processes
+INFO: [Synth 8-7075] Helper process launched with PID 22544
+INFO: [Synth 8-11241] undeclared symbol 'REGCCE', assumed default net type 'wire' [C:/Xilinx/Vivado/2022.2/data/verilog/src/unimacro/BRAM_SINGLE_MACRO.v:2170]
+---------------------------------------------------------------------------------
+Starting Synthesize : Time (s): cpu = 00:00:05 ; elapsed = 00:00:05 . Memory (MB): peak = 1478.609 ; gain = 408.359
+---------------------------------------------------------------------------------
+INFO: [Synth 8-6157] synthesizing module 'rp_t2' [D:/Projects/RC_Project/rtl/t2/rm/rm_int8.v:8]
+INFO: [Synth 8-6157] synthesizing module 'lane_sat' [D:/Projects/RC_Project/rtl/t2/rm/rm_common.v:14]
+	Parameter OUT_W bound to: 8 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'lane_sat' (0#1) [D:/Projects/RC_Project/rtl/t2/rm/rm_common.v:14]
+INFO: [Synth 8-6157] synthesizing module 'array_lut' [D:/Projects/RC_Project/rtl/t2/rm/array_lut.v:7]
+	Parameter DATA_W bound to: 8 - type: integer 
+	Parameter ACC_W bound to: 18 - type: integer 
+INFO: [Synth 8-6157] synthesizing module 'pe_lut' [D:/Projects/RC_Project/rtl/t2/rm/pe_lut.v:8]
+	Parameter DATA_W bound to: 8 - type: integer 
+	Parameter ACC_W bound to: 18 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'pe_lut' (0#1) [D:/Projects/RC_Project/rtl/t2/rm/pe_lut.v:8]
+INFO: [Synth 8-6155] done synthesizing module 'array_lut' (0#1) [D:/Projects/RC_Project/rtl/t2/rm/array_lut.v:7]
+INFO: [Synth 8-6157] synthesizing module 'rm_readout' [D:/Projects/RC_Project/rtl/t2/rm/rm_common.v:35]
+	Parameter ACC_W bound to: 18 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'rm_readout' (0#1) [D:/Projects/RC_Project/rtl/t2/rm/rm_common.v:35]
+INFO: [Synth 8-6157] synthesizing module 'rm_badge' [D:/Projects/RC_Project/rtl/t2/rm/rm_common.v:91]
+	Parameter ID bound to: 8'b00001000 
+	Parameter PAT bound to: 4'b0011 
+	Parameter PRESCALE_W bound to: 24 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'rm_badge' (0#1) [D:/Projects/RC_Project/rtl/t2/rm/rm_common.v:91]
+INFO: [Synth 8-6155] done synthesizing module 'rp_t2' (0#1) [D:/Projects/RC_Project/rtl/t2/rm/rm_int8.v:8]
+---------------------------------------------------------------------------------
+Finished Synthesize : Time (s): cpu = 00:00:06 ; elapsed = 00:00:07 . Memory (MB): peak = 1570.391 ; gain = 500.141
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Constraint Validation : Time (s): cpu = 00:00:07 ; elapsed = 00:00:07 . Memory (MB): peak = 1570.391 ; gain = 500.141
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Loading Part and Timing Information
+---------------------------------------------------------------------------------
+Loading part: xc7z020clg484-1
+---------------------------------------------------------------------------------
+Finished Loading Part and Timing Information : Time (s): cpu = 00:00:07 ; elapsed = 00:00:07 . Memory (MB): peak = 1570.391 ; gain = 500.141
+---------------------------------------------------------------------------------
+INFO: [Device 21-403] Loading part xc7z020clg484-1
+---------------------------------------------------------------------------------
+Finished RTL Optimization Phase 2 : Time (s): cpu = 00:00:07 ; elapsed = 00:00:07 . Memory (MB): peak = 1570.391 ; gain = 500.141
+---------------------------------------------------------------------------------
+No constraint files found.
+---------------------------------------------------------------------------------
+Start RTL Component Statistics 
+---------------------------------------------------------------------------------
+Detailed RTL Component Info : 
++---Registers : 
+	               32 Bit    Registers := 2     
+	               18 Bit    Registers := 1     
+	                8 Bit    Registers := 33    
+	                4 Bit    Registers := 1     
+	                1 Bit    Registers := 2     
++---Multipliers : 
+	                8x8  Multipliers := 16    
++---Muxes : 
+	   2 Input    8 Bit        Muxes := 17    
+	   3 Input    4 Bit        Muxes := 1     
+	   2 Input    3 Bit        Muxes := 1     
+	   2 Input    1 Bit        Muxes := 16    
+---------------------------------------------------------------------------------
+Finished RTL Component Statistics 
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Part Resource Summary
+---------------------------------------------------------------------------------
+Part Resources:
+DSPs: 220 (col length:60)
+BRAMs: 280 (col length: RAMB18 60 RAMB36 30)
+---------------------------------------------------------------------------------
+Finished Part Resource Summary
+---------------------------------------------------------------------------------
+No constraint files found.
+---------------------------------------------------------------------------------
+Start Cross Boundary and Area Optimization
+---------------------------------------------------------------------------------
+WARNING: [Synth 8-7080] Parallel synthesis criteria is not met
+---------------------------------------------------------------------------------
+Finished Cross Boundary and Area Optimization : Time (s): cpu = 00:00:13 ; elapsed = 00:00:14 . Memory (MB): peak = 1787.570 ; gain = 717.320
+---------------------------------------------------------------------------------
+No constraint files found.
+---------------------------------------------------------------------------------
+Start Timing Optimization
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Timing Optimization : Time (s): cpu = 00:00:13 ; elapsed = 00:00:14 . Memory (MB): peak = 1793.348 ; gain = 723.098
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Technology Mapping
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Technology Mapping : Time (s): cpu = 00:00:14 ; elapsed = 00:00:15 . Memory (MB): peak = 1793.543 ; gain = 723.293
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start IO Insertion
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Flattening Before IO Insertion
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Flattening Before IO Insertion
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Final Netlist Cleanup
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Final Netlist Cleanup
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished IO Insertion : Time (s): cpu = 00:00:17 ; elapsed = 00:00:18 . Memory (MB): peak = 1798.312 ; gain = 728.062
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Renaming Generated Instances
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Renaming Generated Instances : Time (s): cpu = 00:00:17 ; elapsed = 00:00:18 . Memory (MB): peak = 1798.312 ; gain = 728.062
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Rebuilding User Hierarchy
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Rebuilding User Hierarchy : Time (s): cpu = 00:00:17 ; elapsed = 00:00:18 . Memory (MB): peak = 1798.312 ; gain = 728.062
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Renaming Generated Ports
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Renaming Generated Ports : Time (s): cpu = 00:00:17 ; elapsed = 00:00:18 . Memory (MB): peak = 1798.312 ; gain = 728.062
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Handling Custom Attributes
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Handling Custom Attributes : Time (s): cpu = 00:00:17 ; elapsed = 00:00:18 . Memory (MB): peak = 1798.312 ; gain = 728.062
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Renaming Generated Nets
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Renaming Generated Nets : Time (s): cpu = 00:00:17 ; elapsed = 00:00:18 . Memory (MB): peak = 1798.312 ; gain = 728.062
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Writing Synthesis Report
+---------------------------------------------------------------------------------
+
+Report BlackBoxes: 
++-+--------------+----------+
+| |BlackBox name |Instances |
++-+--------------+----------+
++-+--------------+----------+
+
+Report Cell Usage: 
++------+-------+------+
+|      |Cell   |Count |
++------+-------+------+
+|1     |CARRY4 |   310|
+|2     |LUT1   |    10|
+|3     |LUT2   |   785|
+|4     |LUT3   |   176|
+|5     |LUT4   |   402|
+|6     |LUT5   |    97|
+|7     |LUT6   |   492|
+|8     |MUXF7  |    36|
+|9     |MUXF8  |    18|
+|10    |FDRE   |   600|
++------+-------+------+
+
+Report Instance Areas: 
++------+-------------------------+-----------+------+
+|      |Instance                 |Module     |Cells |
++------+-------------------------+-----------+------+
+|1     |top                      |           |  2926|
+|2     |  \g_sat[0].u_n          |lane_sat   |    31|
+|3     |  \g_sat[0].u_w          |lane_sat_0 |    31|
+|4     |  \g_sat[1].u_n          |lane_sat_1 |    31|
+|5     |  \g_sat[1].u_w          |lane_sat_2 |    31|
+|6     |  \g_sat[2].u_n          |lane_sat_3 |    31|
+|7     |  \g_sat[2].u_w          |lane_sat_4 |    31|
+|8     |  \g_sat[3].u_n          |lane_sat_5 |    31|
+|9     |  \g_sat[3].u_w          |lane_sat_6 |    31|
+|10    |  u_array                |array_lut  |  1984|
+|11    |    \row[0].col[0].u_pe  |pe_lut     |   205|
+|12    |    \row[0].col[1].u_pe  |pe_lut_7   |   177|
+|13    |    \row[0].col[2].u_pe  |pe_lut_8   |   177|
+|14    |    \row[0].col[3].u_pe  |pe_lut_9   |    95|
+|15    |    \row[1].col[0].u_pe  |pe_lut_10  |   159|
+|16    |    \row[1].col[1].u_pe  |pe_lut_11  |   131|
+|17    |    \row[1].col[2].u_pe  |pe_lut_12  |   131|
+|18    |    \row[1].col[3].u_pe  |pe_lut_13  |    95|
+|19    |    \row[2].col[0].u_pe  |pe_lut_14  |   160|
+|20    |    \row[2].col[1].u_pe  |pe_lut_15  |   131|
+|21    |    \row[2].col[2].u_pe  |pe_lut_16  |   131|
+|22    |    \row[2].col[3].u_pe  |pe_lut_17  |    68|
+|23    |    \row[3].col[0].u_pe  |pe_lut_18  |    78|
+|24    |    \row[3].col[1].u_pe  |pe_lut_19  |    77|
+|25    |    \row[3].col[2].u_pe  |pe_lut_20  |    60|
+|26    |    \row[3].col[3].u_pe  |pe_lut_21  |   109|
+|27    |  u_badge                |rm_badge   |    50|
+|28    |  u_readout              |rm_readout |   145|
++------+-------------------------+-----------+------+
+---------------------------------------------------------------------------------
+Finished Writing Synthesis Report : Time (s): cpu = 00:00:17 ; elapsed = 00:00:18 . Memory (MB): peak = 1798.312 ; gain = 728.062
+---------------------------------------------------------------------------------
+Synthesis finished with 0 errors, 0 critical warnings and 1 warnings.
+Synthesis Optimization Runtime : Time (s): cpu = 00:00:17 ; elapsed = 00:00:18 . Memory (MB): peak = 1798.312 ; gain = 728.062
+Synthesis Optimization Complete : Time (s): cpu = 00:00:17 ; elapsed = 00:00:18 . Memory (MB): peak = 1798.312 ; gain = 728.062
+INFO: [Project 1-571] Translating synthesized netlist
+Netlist sorting complete. Time (s): cpu = 00:00:00 ; elapsed = 00:00:00.032 . Memory (MB): peak = 1810.371 ; gain = 0.000
+INFO: [Netlist 29-17] Analyzing 364 Unisim elements for replacement
+INFO: [Netlist 29-28] Unisim Transformation completed in 0 CPU seconds
+INFO: [Project 1-570] Preparing netlist for logic optimization
+INFO: [Opt 31-138] Pushed 0 inverter(s) to 0 load pin(s).
+Netlist sorting complete. Time (s): cpu = 00:00:00 ; elapsed = 00:00:00.001 . Memory (MB): peak = 1908.914 ; gain = 0.000
+INFO: [Project 1-111] Unisim Transformation Summary:
+No Unisim elements were transformed.
+
+Synth Design complete, checksum: d8c06bd3
+INFO: [Common 17-83] Releasing license: Synthesis
+25 Infos, 1 Warnings, 0 Critical Warnings and 0 Errors encountered.
+synth_design completed successfully
+synth_design: Time (s): cpu = 00:00:19 ; elapsed = 00:00:21 . Memory (MB): peak = 1908.914 ; gain = 862.520
+INFO: [Coretcl 2-1174] Renamed 27 cell refs.
+INFO: [Timing 38-35] Done setting XDC timing constraints.
+INFO: [Common 17-1381] The checkpoint 'D:/Projects/RC_Project/vivado/scratch_t2/t2_dfx_check/t2_dfx.runs/rm_int8_synth_1/rp_t2.dcp' has been generated.
+write_checkpoint: Time (s): cpu = 00:00:07 ; elapsed = 00:00:07 . Memory (MB): peak = 2247.152 ; gain = 338.238
+INFO: [runtcl-4] Executing : report_utilization -file rp_t2_utilization_synth.rpt -pb rp_t2_utilization_synth.pb
+INFO: [Common 17-206] Exiting Vivado at Wed Oct 14 01:29:05 2026...
+[Wed Oct 14 01:29:56 2026] rm_int8_synth_1 finished
+[Wed Oct 14 01:29:56 2026] Waiting for rm_int4_synth_1 to finish...
+
+*** Running vivado
+    with args -log rp_t2.vds -m64 -product Vivado -mode batch -messageDb vivado.pb -notrace -source rp_t2.tcl
+
+
+
+****** Vivado v2022.2 (64-bit)
+  **** SW Build 3671981 on Fri Oct 14 05:00:03 MDT 2022
+  **** IP Build 3669848 on Fri Oct 14 08:30:02 MDT 2022
+    ** Copyright 1986-2022 Xilinx, Inc. All Rights Reserved.
+
+source rp_t2.tcl -notrace
+create_project: Time (s): cpu = 00:00:05 ; elapsed = 00:00:06 . Memory (MB): peak = 1043.359 ; gain = 159.840
+Command: synth_design -top rp_t2 -part xc7z020clg484-1 -mode out_of_context
+Starting synth_design
+Attempting to get a license for feature 'Synthesis' and/or device 'xc7z020'
+INFO: [Common 17-349] Got license for feature 'Synthesis' and/or device 'xc7z020'
+INFO: [Synth 8-7079] Multithreading enabled for synth_design using a maximum of 2 processes.
+INFO: [Synth 8-7078] Launching helper process for spawning children vivado processes
+INFO: [Synth 8-7075] Helper process launched with PID 25964
+INFO: [Synth 8-11241] undeclared symbol 'REGCCE', assumed default net type 'wire' [C:/Xilinx/Vivado/2022.2/data/verilog/src/unimacro/BRAM_SINGLE_MACRO.v:2170]
+---------------------------------------------------------------------------------
+Starting Synthesize : Time (s): cpu = 00:00:04 ; elapsed = 00:00:05 . Memory (MB): peak = 1478.914 ; gain = 410.668
+---------------------------------------------------------------------------------
+INFO: [Synth 8-6157] synthesizing module 'rp_t2' [D:/Projects/RC_Project/rtl/t2/rm/rm_int4.v:8]
+INFO: [Synth 8-6157] synthesizing module 'lane_sat' [D:/Projects/RC_Project/rtl/t2/rm/rm_common.v:14]
+	Parameter OUT_W bound to: 4 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'lane_sat' (0#1) [D:/Projects/RC_Project/rtl/t2/rm/rm_common.v:14]
+INFO: [Synth 8-6157] synthesizing module 'array_lut' [D:/Projects/RC_Project/rtl/t2/rm/array_lut.v:7]
+	Parameter DATA_W bound to: 4 - type: integer 
+	Parameter ACC_W bound to: 10 - type: integer 
+INFO: [Synth 8-6157] synthesizing module 'pe_lut' [D:/Projects/RC_Project/rtl/t2/rm/pe_lut.v:8]
+	Parameter DATA_W bound to: 4 - type: integer 
+	Parameter ACC_W bound to: 10 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'pe_lut' (0#1) [D:/Projects/RC_Project/rtl/t2/rm/pe_lut.v:8]
+INFO: [Synth 8-6155] done synthesizing module 'array_lut' (0#1) [D:/Projects/RC_Project/rtl/t2/rm/array_lut.v:7]
+INFO: [Synth 8-6157] synthesizing module 'rm_readout' [D:/Projects/RC_Project/rtl/t2/rm/rm_common.v:35]
+	Parameter ACC_W bound to: 10 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'rm_readout' (0#1) [D:/Projects/RC_Project/rtl/t2/rm/rm_common.v:35]
+INFO: [Synth 8-6157] synthesizing module 'rm_badge' [D:/Projects/RC_Project/rtl/t2/rm/rm_common.v:91]
+	Parameter ID bound to: 8'b00000100 
+	Parameter PAT bound to: 4'b0001 
+	Parameter PRESCALE_W bound to: 24 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'rm_badge' (0#1) [D:/Projects/RC_Project/rtl/t2/rm/rm_common.v:91]
+INFO: [Synth 8-6155] done synthesizing module 'rp_t2' (0#1) [D:/Projects/RC_Project/rtl/t2/rm/rm_int4.v:8]
+---------------------------------------------------------------------------------
+Finished Synthesize : Time (s): cpu = 00:00:06 ; elapsed = 00:00:07 . Memory (MB): peak = 1569.336 ; gain = 501.090
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Constraint Validation : Time (s): cpu = 00:00:07 ; elapsed = 00:00:07 . Memory (MB): peak = 1569.336 ; gain = 501.090
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Loading Part and Timing Information
+---------------------------------------------------------------------------------
+Loading part: xc7z020clg484-1
+---------------------------------------------------------------------------------
+Finished Loading Part and Timing Information : Time (s): cpu = 00:00:07 ; elapsed = 00:00:07 . Memory (MB): peak = 1569.336 ; gain = 501.090
+---------------------------------------------------------------------------------
+INFO: [Device 21-403] Loading part xc7z020clg484-1
+---------------------------------------------------------------------------------
+Finished RTL Optimization Phase 2 : Time (s): cpu = 00:00:07 ; elapsed = 00:00:08 . Memory (MB): peak = 1569.336 ; gain = 501.090
+---------------------------------------------------------------------------------
+No constraint files found.
+---------------------------------------------------------------------------------
+Start RTL Component Statistics 
+---------------------------------------------------------------------------------
+Detailed RTL Component Info : 
++---Adders : 
+	   2 Input   10 Bit       Adders := 16    
++---Registers : 
+	               16 Bit    Registers := 2     
+	               10 Bit    Registers := 17    
+	                8 Bit    Registers := 1     
+	                4 Bit    Registers := 33    
+	                1 Bit    Registers := 2     
++---Multipliers : 
+	                4x4  Multipliers := 16    
++---Muxes : 
+	   2 Input    8 Bit        Muxes := 1     
+	   2 Input    4 Bit        Muxes := 16    
+	   3 Input    4 Bit        Muxes := 1     
+	   2 Input    2 Bit        Muxes := 1     
+	   2 Input    1 Bit        Muxes := 16    
+---------------------------------------------------------------------------------
+Finished RTL Component Statistics 
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Part Resource Summary
+---------------------------------------------------------------------------------
+Part Resources:
+DSPs: 220 (col length:60)
+BRAMs: 280 (col length: RAMB18 60 RAMB36 30)
+---------------------------------------------------------------------------------
+Finished Part Resource Summary
+---------------------------------------------------------------------------------
+No constraint files found.
+---------------------------------------------------------------------------------
+Start Cross Boundary and Area Optimization
+---------------------------------------------------------------------------------
+WARNING: [Synth 8-7080] Parallel synthesis criteria is not met
+---------------------------------------------------------------------------------
+Finished Cross Boundary and Area Optimization : Time (s): cpu = 00:00:13 ; elapsed = 00:00:14 . Memory (MB): peak = 1791.340 ; gain = 723.094
+---------------------------------------------------------------------------------
+No constraint files found.
+---------------------------------------------------------------------------------
+Start Timing Optimization
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Timing Optimization : Time (s): cpu = 00:00:13 ; elapsed = 00:00:14 . Memory (MB): peak = 1791.340 ; gain = 723.094
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Technology Mapping
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Technology Mapping : Time (s): cpu = 00:00:13 ; elapsed = 00:00:15 . Memory (MB): peak = 1791.340 ; gain = 723.094
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start IO Insertion
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Flattening Before IO Insertion
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Flattening Before IO Insertion
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Final Netlist Cleanup
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Final Netlist Cleanup
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished IO Insertion : Time (s): cpu = 00:00:17 ; elapsed = 00:00:18 . Memory (MB): peak = 1791.340 ; gain = 723.094
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Renaming Generated Instances
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Renaming Generated Instances : Time (s): cpu = 00:00:17 ; elapsed = 00:00:18 . Memory (MB): peak = 1791.340 ; gain = 723.094
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Rebuilding User Hierarchy
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Rebuilding User Hierarchy : Time (s): cpu = 00:00:17 ; elapsed = 00:00:18 . Memory (MB): peak = 1791.340 ; gain = 723.094
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Renaming Generated Ports
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Renaming Generated Ports : Time (s): cpu = 00:00:17 ; elapsed = 00:00:18 . Memory (MB): peak = 1791.340 ; gain = 723.094
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Handling Custom Attributes
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Handling Custom Attributes : Time (s): cpu = 00:00:17 ; elapsed = 00:00:18 . Memory (MB): peak = 1791.340 ; gain = 723.094
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Renaming Generated Nets
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Renaming Generated Nets : Time (s): cpu = 00:00:17 ; elapsed = 00:00:18 . Memory (MB): peak = 1791.340 ; gain = 723.094
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Writing Synthesis Report
+---------------------------------------------------------------------------------
+
+Report BlackBoxes: 
++-+--------------+----------+
+| |BlackBox name |Instances |
++-+--------------+----------+
++-+--------------+----------+
+
+Report Cell Usage: 
++------+-------+------+
+|      |Cell   |Count |
++------+-------+------+
+|1     |CARRY4 |   118|
+|2     |LUT1   |    26|
+|3     |LUT2   |   353|
+|4     |LUT3   |    64|
+|5     |LUT4   |    34|
+|6     |LUT5   |    49|
+|7     |LUT6   |   300|
+|8     |MUXF7  |    36|
+|9     |MUXF8  |    10|
+|10    |FDRE   |   336|
++------+-------+------+
+
+Report Instance Areas: 
++------+-------------------------+-----------+------+
+|      |Instance                 |Module     |Cells |
++------+-------------------------+-----------+------+
+|1     |top                      |           |  1326|
+|2     |  \g_sat[0].u_n          |lane_sat   |    35|
+|3     |  \g_sat[0].u_w          |lane_sat_0 |    35|
+|4     |  \g_sat[1].u_n          |lane_sat_1 |    35|
+|5     |  \g_sat[1].u_w          |lane_sat_2 |    35|
+|6     |  \g_sat[2].u_n          |lane_sat_3 |    35|
+|7     |  \g_sat[2].u_w          |lane_sat_4 |    35|
+|8     |  \g_sat[3].u_n          |lane_sat_5 |    35|
+|9     |  \g_sat[3].u_w          |lane_sat_6 |    35|
+|10    |  u_array                |array_lut  |   856|
+|11    |    \row[0].col[0].u_pe  |pe_lut     |    85|
+|12    |    \row[0].col[1].u_pe  |pe_lut_7   |    75|
+|13    |    \row[0].col[2].u_pe  |pe_lut_8   |    75|
+|14    |    \row[0].col[3].u_pe  |pe_lut_9   |    44|
+|15    |    \row[1].col[0].u_pe  |pe_lut_10  |    66|
+|16    |    \row[1].col[1].u_pe  |pe_lut_11  |    57|
+|17    |    \row[1].col[2].u_pe  |pe_lut_12  |    57|
+|18    |    \row[1].col[3].u_pe  |pe_lut_13  |    44|
+|19    |    \row[2].col[0].u_pe  |pe_lut_14  |    67|
+|20    |    \row[2].col[1].u_pe  |pe_lut_15  |    57|
+|21    |    \row[2].col[2].u_pe  |pe_lut_16  |    57|
+|22    |    \row[2].col[3].u_pe  |pe_lut_17  |    38|
+|23    |    \row[3].col[0].u_pe  |pe_lut_18  |    36|
+|24    |    \row[3].col[1].u_pe  |pe_lut_19  |    35|
+|25    |    \row[3].col[2].u_pe  |pe_lut_20  |    34|
+|26    |    \row[3].col[3].u_pe  |pe_lut_21  |    29|
+|27    |  u_badge                |rm_badge   |    50|
+|28    |  u_readout              |rm_readout |    81|
++------+-------------------------+-----------+------+
+---------------------------------------------------------------------------------
+Finished Writing Synthesis Report : Time (s): cpu = 00:00:17 ; elapsed = 00:00:18 . Memory (MB): peak = 1791.340 ; gain = 723.094
+---------------------------------------------------------------------------------
+Synthesis finished with 0 errors, 0 critical warnings and 1 warnings.
+Synthesis Optimization Runtime : Time (s): cpu = 00:00:17 ; elapsed = 00:00:18 . Memory (MB): peak = 1791.340 ; gain = 723.094
+Synthesis Optimization Complete : Time (s): cpu = 00:00:17 ; elapsed = 00:00:18 . Memory (MB): peak = 1791.340 ; gain = 723.094
+INFO: [Project 1-571] Translating synthesized netlist
+Netlist sorting complete. Time (s): cpu = 00:00:00 ; elapsed = 00:00:00.009 . Memory (MB): peak = 1801.129 ; gain = 0.000
+INFO: [Netlist 29-17] Analyzing 164 Unisim elements for replacement
+INFO: [Netlist 29-28] Unisim Transformation completed in 0 CPU seconds
+INFO: [Project 1-570] Preparing netlist for logic optimization
+INFO: [Opt 31-138] Pushed 0 inverter(s) to 0 load pin(s).
+Netlist sorting complete. Time (s): cpu = 00:00:00 ; elapsed = 00:00:00 . Memory (MB): peak = 1902.137 ; gain = 0.000
+INFO: [Project 1-111] Unisim Transformation Summary:
+No Unisim elements were transformed.
+
+Synth Design complete, checksum: 684438ef
+INFO: [Common 17-83] Releasing license: Synthesis
+25 Infos, 1 Warnings, 0 Critical Warnings and 0 Errors encountered.
+synth_design completed successfully
+synth_design: Time (s): cpu = 00:00:18 ; elapsed = 00:00:20 . Memory (MB): peak = 1902.137 ; gain = 858.777
+INFO: [Coretcl 2-1174] Renamed 27 cell refs.
+INFO: [Timing 38-35] Done setting XDC timing constraints.
+INFO: [Common 17-1381] The checkpoint 'D:/Projects/RC_Project/vivado/scratch_t2/t2_dfx_check/t2_dfx.runs/rm_int4_synth_1/rp_t2.dcp' has been generated.
+write_checkpoint: Time (s): cpu = 00:00:07 ; elapsed = 00:00:07 . Memory (MB): peak = 2245.223 ; gain = 343.086
+INFO: [runtcl-4] Executing : report_utilization -file rp_t2_utilization_synth.rpt -pb rp_t2_utilization_synth.pb
+INFO: [Common 17-206] Exiting Vivado at Wed Oct 14 01:29:05 2026...
+[Wed Oct 14 01:29:56 2026] rm_int4_synth_1 finished
+[T2] vio_t2_synth_1     synth_design Complete!       LUT   344  FF  1638  DSP   0
+[T2] synth_1            synth_design Complete!       LUT   517  FF   280  DSP   0
+[T2] rm_int16_synth_1   synth_design Complete!       LUT   254  FF   166  DSP  16
+[T2] rm_int8_synth_1    synth_design Complete!       LUT  1442  FF   600  DSP   0
+[T2] rm_int4_synth_1    synth_design Complete!       LUT   674  FF   336  DSP   0
+Command: open_checkpoint D:/Projects/RC_Project/vivado/scratch_t2/t2_dfx_check/t2_dfx.runs/synth_1/top_t2.dcp
+
+Starting open_checkpoint Task
+
+Time (s): cpu = 00:00:00 ; elapsed = 00:00:00.029 . Memory (MB): peak = 1116.504 ; gain = 11.172
+INFO: [Device 21-403] Loading part xc7z020clg484-1
+Netlist sorting complete. Time (s): cpu = 00:00:00 ; elapsed = 00:00:00.007 . Memory (MB): peak = 1523.570 ; gain = 0.000
+INFO: [Netlist 29-17] Analyzing 98 Unisim elements for replacement
+INFO: [Netlist 29-28] Unisim Transformation completed in 0 CPU seconds
+INFO: [Project 1-479] Netlist was created with Vivado 2022.2
+INFO: [Project 1-570] Preparing netlist for logic optimization
+INFO: [Project 1-486] Could not resolve non-primitive black box cell 'rp_t2' instantiated as 'U_RP' [D:/Projects/RC_Project/rtl/t2/top_t2.v:115]
+CRITICAL WARNING: [Project 1-486] Could not resolve non-primitive black box cell 'vio_t2' instantiated as 'U_VIO' [D:/Projects/RC_Project/rtl/t2/top_t2.v:141]
+Netlist sorting complete. Time (s): cpu = 00:00:00 ; elapsed = 00:00:00.001 . Memory (MB): peak = 1617.594 ; gain = 0.000
+INFO: [Project 1-111] Unisim Transformation Summary:
+No Unisim elements were transformed.
+
+INFO: [Project 1-604] Checkpoint was created with Vivado v2022.2 (64-bit) build 3671981
+OpenCheckpoint Checksum | Checksum: 9513722a
+----- Checksum: PlaceDB: 00000000 ShapeSum: 9513722a RouteDB: 00000000 
+[T2] synth_1 U_RP: REF_NAME rp_t2  IS_BLACKBOX 1  leaf cells inside 0
+SCRATCH OK
+INFO: [Common 17-206] Exiting Vivado at Wed Oct 14 01:30:00 2026...

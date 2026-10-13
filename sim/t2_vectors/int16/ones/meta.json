@@ -1,0 +1,10 @@
+{
+  "prec": "int16",
+  "W": 16,
+  "ACC_W": 48,
+  "rm_id": "16",
+  "case": "ones",
+  "seed": null,
+  "any_ovf": false,
+  "n_clamped_inputs": 0
+}
