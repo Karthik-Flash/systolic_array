@@ -222,9 +222,15 @@ proc t2_hw_read {names} {
 }
 
 # ---------------------------------------------------------------- basic operations
+proc t2_hw_info {} {
+    if {$::T2_MOCK} { return "mock device, no JTAG" }
+    set f "?"
+    catch {set f [get_property PARAM.FREQUENCY [current_hw_target]]}
+    return "JTAG clock $f Hz"
+}
 proc t2_connect {} {
     t2_hw_connect
-    puts "T2: connected (device $::T2_DEV). Next: t2_program full int16"
+    puts "T2: connected (device $::T2_DEV; [t2_hw_info]). Next: t2_program full int16"
 }
 proc t2__init_outputs {} {
     # after a full program every VIO output is 0 in hardware; writing 0 resyncs the cache (G11)
@@ -248,6 +254,19 @@ proc t2_status {} {
         [expr {$f & 1}] [expr {($f>>1)&1}] [expr {($f>>2)&1}] [expr {($f>>3)&1}] [t2_hex2u $rn] [t2_hex8 [t2_hex2s32 $rs]]]
     puts "T2: $s"
     return $s
+}
+# list the probes on the VIO core and check that all 11 locked names resolve (run once after the first full program)
+proc t2_probes {} {
+    set names {vio_decouple vio_rm_rst vio_start vio_sel vio_a vio_b vio_result vio_rm_id vio_uptime vio_flags vio_runs}
+    if {$::T2_MOCK} { puts "T2: probes: all 11 resolved (mock)"; return 1 }
+    foreach p [get_hw_probes -quiet -of_objects [t2__vio]] {
+        set w "?"; catch {set w [get_property WIDTH $p]}
+        puts [format "  %-24s width %s" [get_property NAME $p] $w]
+    }
+    set bad 0
+    foreach n $names { if {[catch {t2__probe $n} m]} { puts "  MISSING $n : $m"; incr bad } }
+    if {$bad == 0} { puts "T2: probes: all 11 resolved" } else { puts "T2: probes: $bad MISSING (see T2_ALIAS in the runbook)" }
+    return [expr {$bad == 0}]
 }
 proc t2_rmid {}   { return [t2_norm_id [lindex [t2_hw_read {vio_rm_id}] 0]] }
 proc t2_prec_of {id} {
@@ -342,6 +361,17 @@ proc t2_check_set {{cases ""}} {
     set n 0
     foreach cs $cases { incr n [t2_check $cs 0] }
     return [list $n [llength $cases]]
+}
+
+# all 9 golden cases on whatever RM is loaded (about a minute); 1 = all pass
+proc t2_check_all {} {
+    set cases {identity ones zeros counting asym_small random_inrange random_full extremes_neg extremes_mix}
+    set prec [t2_prec_of [t2_rmid]]
+    set n 0
+    foreach cs $cases { incr n [t2_check $cs 1] }
+    set ok [expr {$n == [llength $cases]}]
+    puts "T2: ALL CASES on $prec: $n/[llength $cases] [expr {$ok ? "PASS" : "FAIL"}]"
+    return $ok
 }
 
 # decouple -> partial -> release; returns program ms
@@ -540,4 +570,4 @@ proc t2_selftest {{rounds 3}} {
 }
 
 puts "hw_t2.tcl loaded (mock=$::T2_MOCK). Procs: t2_connect t2_program t2_status t2_check t2_swap t2_swap_demo"
-puts "  t2_block_test t2_demo t2_set_precision t2_full_contrast t2_selftest t2_load t2_load_case t2_run t2_read_c"
+puts "  t2_probes t2_check_all t2_block_test t2_demo t2_set_precision t2_full_contrast t2_selftest t2_load t2_load_case t2_run t2_read_c"

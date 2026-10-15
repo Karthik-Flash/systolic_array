@@ -151,15 +151,20 @@ expect "A\[0\]\[0\] is the last 4 digits" [string equal [string range [t2_pack25
 fresh
 t2_program full int16
 set all {identity ones zeros counting asym_small random_inrange random_full extremes_neg extremes_mix}
+expect "t2_probes"                [t2_probes]
 foreach prec {int16 int8 int4} {
     if {$prec ne "int16"} { t2_swap $prec }
     set n 0
     foreach cs $all { incr n [t2_check $cs 0] }
     expect "$prec: all 9 golden cases bit-exact ($n/9)" [expr {$n == 9}]
+    expect "$prec: t2_check_all"    [t2_check_all]
 }
 t2_swap int16
 expect "t2_block_test"            [t2_block_test]
 foreach p {int8 int4 grey int16} { expect "t2_swap_demo $p" [t2_swap_demo $p] }
+t2_swap grey
+expect "grey: t2_check_all"       [t2_check_all]
+t2_swap int16
 expect "t2_set_precision int4"    [t2_set_precision int4 counting]
 expect "t2_demo"                  [t2_demo]
 expect "t2_full_contrast"         [t2_full_contrast]
