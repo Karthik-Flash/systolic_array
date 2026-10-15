@@ -1,6 +1,6 @@
-# systolic_array
+# Dynamic Precision-Scalable Systolic Array using DFX
 
-A **precision-scalable systolic matrix multiplier** on the ZedBoard (Zynq-7000 `xc7z020clg484-1`), built for Reconfigurable Computing (CS G553, BITS Hyderabad). A 4×4 output-stationary systolic array is designed and verified in Verilog against a Python golden model. Dynamic Function eXchange (partial reconfiguration) then swaps the arithmetic at runtime, while the rest of the chip keeps running. Everything runs PL-only and is controlled over a single JTAG cable (VIO), with no ARM software.
+This project implements a 4×4 output-stationary systolic array for matrix multiplication, the core operation of neural-network inference, on a ZedBoard (Zynq-7020). Using Dynamic Function eXchange (DFX), the array's arithmetic precision (int16, int8 or int4) is hot-swapped at runtime inside a single reconfigurable partition while the rest of the design keeps running. Each precision is a partial bitstream behind one frozen interface: int16 uses DSP slices, while int8 and int4 use LUT fabric. Every variant is checked bit-exact against a Python golden model. One physical region therefore serves several accuracy and resource trade-offs, avoiding dedicated arrays for each precision.
 
 ## Status
 
@@ -8,7 +8,7 @@ A **precision-scalable systolic matrix multiplier** on the ZedBoard (Zynq-7000 `
 |---|---|---|---|
 | **T0** | 4×4 int16 systolic array: datapath, controller, UART system (sim), VIO bring-up (silicon) | ✅ complete | [T0 Complete Guide](docs/t0/T0_Complete_Guide.md) |
 | **T1** | DFX mechanism proof: one reconfigurable partition, swap adder ↔ multiplier ↔ greybox over JTAG | ✅ complete on silicon | [T1 Complete Guide](docs/t1/T1_Complete_Guide.md) · [T1 Results](docs/t1/T1_RESULTS.md) |
-| T2 | Precision variants (int16 / int8 / int4 array) as reconfigurable modules in the T1 Pblock | next | — |
+| T2 | Precision variants (int16 / int8 / int4 array) as reconfigurable modules in the T1 Pblock | bitstreams built and verified (t2-built); board session pending | — |
 | T3 | Runtime precision control and measurement (optionally MNIST) | later | — |
 
 Tags: `t0-datapath`, `t0-system`, `t0-onboard`, `t1-rtl`, `t1-built`, `t1-onboard`.
