@@ -31,3 +31,5 @@ sim/t2_build/
 **/__pycache__/
 .pytest_cache/
 *.jou
+
+copilot-instructions.md
