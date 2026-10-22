@@ -8,7 +8,7 @@ This project implements a 4×4 output-stationary systolic array for matrix multi
 |---|---|---|---|
 | **T0** | 4×4 int16 systolic array: datapath, controller, UART system (sim), VIO bring-up (silicon) | ✅ complete | [T0 Complete Guide](docs/t0/T0_Complete_Guide.md) |
 | **T1** | DFX mechanism proof: one reconfigurable partition, swap adder ↔ multiplier ↔ greybox over JTAG | ✅ complete on silicon | [T1 Complete Guide](docs/t1/T1_Complete_Guide.md) · [T1 Results](docs/t1/T1_RESULTS.md) |
-| T2 | Precision variants (int16 / int8 / int4 array) as reconfigurable modules in the T1 Pblock | bitstreams built and verified (t2-built); board session pending | — |
+| T2 | Precision variants (int16 / int8 / int4 array) as reconfigurable modules in the T1 Pblock | on silicon (t2-onboard) | — |
 | T3 | Runtime precision control and measurement (optionally MNIST) | later | — |
 
 Tags: `t0-datapath`, `t0-system`, `t0-onboard`, `t1-rtl`, `t1-built`, `t1-onboard`.
