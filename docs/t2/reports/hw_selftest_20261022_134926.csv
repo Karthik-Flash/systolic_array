@@ -1,0 +1,15 @@
+step,op,file,bytes,ms,uptime_before,uptime_after,check,rm_id,cases_pass,cases_total,verdict
+1,full,t2_full_int16.bit,4045666,2504,-,2,n/a,16,5,5,PASS
+2,full,t2_full_int16.bit,4045666,2497,3,0,reset=yes,16,5,5,PASS
+3,partial_int8,t2_partial_int8.bit,585559,421,2,3,continuity=yes,08,5,5,PASS
+4,partial_int4,t2_partial_int4.bit,585559,436,5,6,continuity=yes,04,5,5,PASS
+5,partial_grey,t2_partial_grey.bit,585559,415,7,8,continuity=yes,00,1,1,PASS
+6,partial_int16,t2_partial_int16.bit,585559,419,9,10,continuity=yes,16,5,5,PASS
+7,partial_int8,t2_partial_int8.bit,585559,418,12,12,continuity=yes,08,5,5,PASS
+8,partial_int4,t2_partial_int4.bit,585559,436,14,15,continuity=yes,04,5,5,PASS
+9,partial_grey,t2_partial_grey.bit,585559,416,17,18,continuity=yes,00,1,1,PASS
+10,partial_int16,t2_partial_int16.bit,585559,414,18,19,continuity=yes,16,5,5,PASS
+11,partial_int8,t2_partial_int8.bit,585559,518,21,22,continuity=yes,08,5,5,PASS
+12,partial_int4,t2_partial_int4.bit,585559,427,24,25,continuity=yes,04,5,5,PASS
+13,partial_grey,t2_partial_grey.bit,585559,421,27,28,continuity=yes,00,1,1,PASS
+14,partial_int16,t2_partial_int16.bit,585559,411,28,29,continuity=yes,16,5,5,PASS
