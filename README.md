@@ -8,10 +8,10 @@ This project implements a 4×4 output-stationary systolic array for matrix multi
 |---|---|---|---|
 | **T0** | 4×4 int16 systolic array: datapath, controller, UART system (sim), VIO bring-up (silicon) | ✅ complete | [T0 Complete Guide](docs/t0/T0_Complete_Guide.md) |
 | **T1** | DFX mechanism proof: one reconfigurable partition, swap adder ↔ multiplier ↔ greybox over JTAG | ✅ complete on silicon | [T1 Complete Guide](docs/t1/T1_Complete_Guide.md) · [T1 Results](docs/t1/T1_RESULTS.md) |
-| T2 | Precision variants (int16 / int8 / int4 array) as reconfigurable modules in the T1 Pblock | on silicon (t2-onboard) | — |
+| T2 | Precision variants (int16 / int8 / int4 array) as reconfigurable modules in the T1 Pblock | on silicon (t2-onboard) | [T2 guide, plain language](docs/t2/T2_Guide_Simple.md) |
 | T3 | Runtime precision control and measurement (optionally MNIST) | later | — |
 
-Tags: `t0-datapath`, `t0-system`, `t0-onboard`, `t1-rtl`, `t1-built`, `t1-onboard`.
+Tags: `t0-datapath`, `t0-system`, `t0-onboard`, `t1-rtl`, `t1-built`, `t1-onboard`, `t2-rtl`, `t2-built`, `t2-onboard`.
 
 ## Headline numbers
 
@@ -73,3 +73,10 @@ source D:/Projects/RC_Project/scripts/t1/hw_t1.tcl
 t1_connect ; t1_program full add ; t1_swap_demo mul ; t1_selftest
 ```
 Dry run without a board: from `vivado/`, `vivado -mode batch -nojournal -nolog -source ../scripts/t1/hw_t1_mock.tcl` → `MOCK TESTS PASS`.
+
+## Documentation
+
+- [T0 guide](docs/t0/T0_Complete_Guide.md)
+- [T1 guide](docs/t1/T1_Complete_Guide.md)
+- [T2 guide, plain language](docs/t2/T2_Guide_Simple.md)
+- [T2 board runbook and session record](docs/t2/T2_BOARD_RUNBOOK.md)
