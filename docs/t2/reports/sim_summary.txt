@@ -1,0 +1,22 @@
+T2 simulation summary (scripts/t2/run_sims.py; XSim 2022.2, Icarus lint)
+build                            result                     xvlog/xelab warnings  iverilog lint
+tb_rp_t2_rm_int16                PASS                       0                     n/a (rtl/array.v)
+tb_rp_t2_rm_int8                 PASS                       0                     clean
+tb_rp_t2_rm_int4                 PASS                       0                     clean
+tb_top_t2_rm_int16               PASS                       0                     n/a (rtl/array.v)
+tb_top_t2_rm_int8                PASS                       0                     clean
+tb_top_t2_rm_int4                PASS                       0                     clean
+N1_rp_int8_exp_with_rm_int16     FAILED as expected         0                     n/a (rtl/array.v)
+    reason seen: FAIL rm_id after release: got 00000016 exp 00000008 (t=46000)
+    reason seen: FAIL result case identity [0]: got ffffcd29 ovf 0 exp ffffff80 ovf 0
+N2_rp_int4_exp_with_rm_int8      FAILED as expected         0                     clean
+    reason seen: FAIL rm_id after release: got 00000008 exp 00000004 (t=46000)
+    reason seen: FAIL result case identity [0]: got ffffff80 ovf 0 exp fffffff8 ovf 0
+N3_top_ungated_rm_int8           FAILED as expected         0                     clean
+    reason seen: FAIL gate: decoupled runs unchanged: got 0000000b exp 0000000a (t=8526000)
+    reason seen: FAIL gate: rm_rst runs unchanged: got 0000000d exp 0000000c (t=9536000)
+    reason seen: FAIL gate: decoupled blocked 1: got 00000000 exp 00000001 (t=8526000)
+port list check (rp_t2 declarations, whitespace-normalised): IDENTICAL
+latency: 27 (rm, case) rows; distinct (ct_cycles, cycles) = [('12', '15')] -> IDENTICAL across RMs and cases
+ALL PASS
+NEGATIVE OK

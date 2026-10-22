@@ -1,0 +1,10 @@
+file,bytes,sha256,config,source_run,source_path,mtime
+t2_full_int16.bit,4045666,9010177bda05903f9e05247b3a92e08655bfeeffeb8fb6addbd68a85bce325db,cfg_int16,impl_1,vivado/t2_dfx/t2_dfx.runs/impl_1/top_t2.bit,2026-10-15 21:46:42
+t2_partial_int16.bit,585559,2e9028d808da248f2090713a96e89a048fe9ba87f1708a987717de8dd5bec8bc,cfg_int16,impl_1,vivado/t2_dfx/t2_dfx.runs/impl_1/U_RP_rm_int16_partial.bit,2026-10-15 21:46:51
+t2_full_int8.bit,4045666,b58781663a58c1f180ce62a984c1a0622531cbec889ab6a79a53650f2eb6b3ca,cfg_int8,child_0_impl_1,vivado/t2_dfx/t2_dfx.runs/child_0_impl_1/top_t2.bit,2026-10-15 21:48:47
+t2_partial_int8.bit,585559,18817400607b619e471ac6b15909fb7821892d5af74540b8b498b30163330285,cfg_int8,child_0_impl_1,vivado/t2_dfx/t2_dfx.runs/child_0_impl_1/U_RP_rm_int8_partial.bit,2026-10-15 21:49:03
+t2_full_int4.bit,4045666,61eb40a33f1cb5ee1a680e589a2023f3e06bd748035f0a97f2af6ec7294cb7bc,cfg_int4,child_1_impl_1,vivado/t2_dfx/t2_dfx.runs/child_1_impl_1/top_t2.bit,2026-10-15 21:48:40
+t2_partial_int4.bit,585559,ed0868240fe55a1c8f1e67326985a98f9f75126842f200bc90a3bf61f6f8e4c6,cfg_int4,child_1_impl_1,vivado/t2_dfx/t2_dfx.runs/child_1_impl_1/U_RP_rm_int4_partial.bit,2026-10-15 21:48:48
+t2_full_grey.bit,4045666,e0ec22123bbb34c746fd1cefbc186ab64feadf888eb4a4112b9ee29bdf0102ea,cfg_grey,child_2_impl_1,vivado/t2_dfx/t2_dfx.runs/child_2_impl_1/top_t2.bit,2026-10-15 21:48:33
+t2_partial_grey.bit,585559,e9d7d049b0bd4bca6bcf4ceedc8058c56438cef077f8f4b932d739106b01755d,cfg_grey,child_2_impl_1,vivado/t2_dfx/t2_dfx.runs/child_2_impl_1/U_RP_greybox_partial.bit,2026-10-15 21:48:43
+t2_full_int16.ltx,110316,0729f0ee9d8f01b775fabb84aad657fd527836d7f521580d309f059746f1190d,cfg_int16,impl_1,vivado/t2_dfx/t2_dfx.runs/impl_1/top_t2.ltx,2026-10-15 21:46:52

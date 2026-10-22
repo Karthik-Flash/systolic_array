@@ -1,0 +1,5 @@
+config,run,wns_ns,whs_ns,lut,ff,dsp,bram,urp_lut,urp_ff,urp_dsp,urp_bram,pblock_lut_pct,pblock_dsp_pct,partition_pins,pp_method,drc_errors,crit_levels,crit_from,crit_to
+cfg_int16,impl_1,2.135,0.088,1553,2825,16,0,253,166,16,0,5.75,40.00,180,get_pplocs,0,6,null,null
+cfg_int8,child_0_impl_1,1.481,0.088,2751,3259,0,0,1451,600,0,0,32.98,0.00,180,get_pplocs,0,11,null,null
+cfg_int4,child_1_impl_1,2.981,0.088,1993,2995,0,0,693,336,0,0,15.75,0.00,180,get_pplocs,0,0,null,null
+cfg_grey,child_2_impl_1,2.981,0.088,1479,2660,0,0,179,1,0,0,4.07,0.00,180,get_pplocs,0,0,null,null

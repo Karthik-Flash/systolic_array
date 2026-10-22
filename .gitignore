@@ -26,3 +26,10 @@ vivado*.log
 
 NOTE.txt
 T0_Explained_From_Scratch.md
+# T2
+sim/t2_build/
+**/__pycache__/
+.pytest_cache/
+*.jou
+
+copilot-instructions.md

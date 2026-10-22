@@ -1,0 +1,10 @@
+{
+  "prec": "int8",
+  "W": 8,
+  "ACC_W": 18,
+  "rm_id": "08",
+  "case": "extremes_neg",
+  "seed": null,
+  "any_ovf": false,
+  "n_clamped_inputs": 32
+}
