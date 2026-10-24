@@ -1,0 +1,5 @@
+config,lut_total,ff_total,dsp,lut_region,wns_ns,datapath_delay_ns,logic_levels,fmax_est_mhz,power_total_w,power_dynamic_w,power_static_w,junction_c,power_confidence
+cfg_int16,1553,2825,16,253,2.135,7.732,6,127.1,0.135,0.032,0.103,26.6,Medium
+cfg_int8,2751,3259,0,1451,1.481,8.538,11,117.4,0.127,0.021,0.106,26.5,Medium
+cfg_int4,1993,2995,0,693,2.981,6.532,0,142.5,0.124,0.017,0.106,26.4,Medium
+cfg_grey,1479,2660,0,179,2.981,6.532,0,142.5,0.116,0.013,0.103,26.3,Medium
