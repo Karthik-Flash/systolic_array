@@ -8,7 +8,7 @@ This project implements a 4×4 output-stationary systolic array for matrix multi
 |---|---|---|---|
 | **T0** | 4×4 int16 systolic array: datapath, controller, UART system (sim), VIO bring-up (silicon) | ✅ complete | [T0 Complete Guide](docs/t0/T0_Complete_Guide.md) |
 | **T1** | DFX mechanism proof: one reconfigurable partition, swap adder ↔ multiplier ↔ greybox over JTAG | ✅ complete on silicon | [T1 Complete Guide](docs/t1/T1_Complete_Guide.md) · [T1 Results](docs/t1/T1_RESULTS.md) |
-| T2 | Precision variants (int16 / int8 / int4 array) as reconfigurable modules in the T1 Pblock | on silicon (t2-onboard) | [T2 Complete Guide](docs/t2/T2_Complete_Guide.md) |
+| **T2** | Precision variants (int16 / int8 / int4 array) as reconfigurable modules in the T1 Pblock | ✅ complete on silicon | [T2 Complete Guide](docs/t2/T2_Complete_Guide.md) · [Project detail](docs/PROJECT_DETAIL.md) |
 | T3 | Runtime precision control and measurement (optionally MNIST) | later | — |
 
 Tags: `t0-datapath`, `t0-system`, `t0-onboard`, `t1-rtl`, `t1-built`, `t1-onboard`, `t2-rtl`, `t2-built`, `t2-onboard`.
@@ -29,19 +29,34 @@ Tags: `t0-datapath`, `t0-system`, `t0-onboard`, `t1-rtl`, `t1-built`, `t1-onboar
 | Timing @ 100 MHz | WNS +4.304 / +3.501 / +4.304 ns (add / mul / grey), `pr_verify` PASS |
 | Pblock (reused by T2) | right part of clock region X1Y1: 4,400 LUT, 8,800 FF, **40 DSP**, 10 BRAM |
 
+**T2** (precision swap; [details](docs/t2/T2_Complete_Guide.md#20-what-the-numbers-mean)):
+
+| | |
+|---|---|
+| Swappable region, LUTs | int16 **253** (+ 16 DSP) · int8 **1,451** · int4 **693** · empty 179 (0 DSP in int8 / int4 / empty) |
+| Timing @ 100 MHz | WNS +2.135 / +1.481 / +2.981 / +2.981 ns (int16 / int8 / int4 / empty), WHS +0.088 ns, `pr_verify` PASS (180 partition pins) |
+| Partial swap over JTAG (15 MHz) | **429.3 ms** mean (N = 12, sd 29.1, 411–518 ms), vs full program 2,500.5 ms (N = 2) |
+| Partial bitstream | 585,559 B = **14.5%** of the full 4,045,666 B; the same for every module |
+| On silicon | **14/14** self-test steps, **144/144** demo values bit-exact, 23 programs (19 partial, 4 full) without a failure |
+| Power | 0.135 / 0.127 / 0.124 / 0.116 W total (int16 / int8 / int4 / empty): Vivado vectorless estimate, confidence Medium; not measured on the board |
+
 ## Repo map
 
 ```
 rtl/            T0 Verilog (pe, array, controller, uart, loader, top, top_vio)
 rtl/t1/         T1 static top + reconfigurable modules (rm/rm_add.v, rm/rm_mul.v)
-tb/  tb/t1/     self-checking testbenches (T0 / T1)
-constraints/    XDC: top.xdc, top_vio.xdc (T0); top_dfx.xdc, top_dfx_pblock.xdc (T1)
-python/         golden model, quantisation helpers, vector generator, trace diff, UART host
+rtl/t2/         T2 static top + int16 / int8 / int4 modules (rm/)
+tb/  tb/t1/ tb/t2/  self-checking testbenches (T0 / T1 / T2)
+constraints/    XDC: top.xdc, top_vio.xdc (T0); top_dfx*.xdc (T1); top_t2*.xdc (T2)
+python/         golden models (T0, T2), quantisation helpers, vector generators, trace diff, UART host
 sim/vectors/    golden test vectors for the T0 benches
-scripts/t1/     T1 sims, OOC check, bitstream collector, reports, Hardware Manager + mock harness
-bitstreams/t1/  T1 full + partial bitstreams, probes file, manifest.csv
+sim/t2_vectors/ golden test vectors for T2, per precision and case
+scripts/t1/ scripts/t2/  sims, OOC checks, project script, collectors, reports, board scripts + mocks
+bitstreams/t1/ bitstreams/t2/  full + partial bitstreams, probes file, manifest.csv
 docs/t0/        T0 guide (+ img/)
 docs/t1/        T1 guide, results, original plan, board runbook, reports/, img/
+docs/t2/        T2 guide, plan, board runbook, reports/, img/
+docs/           PROJECT_DETAIL.md (whole project), DEMO.md (live demo script)
 vivado/         Vivado projects (gitignored; regenerate from sources)
 ```
 
@@ -74,9 +89,19 @@ t1_connect ; t1_program full add ; t1_swap_demo mul ; t1_selftest
 ```
 Dry run without a board: from `vivado/`, `vivado -mode batch -nojournal -nolog -source ../scripts/t1/hw_t1_mock.tcl` → `MOCK TESTS PASS`.
 
+**T2: precision swap**
+```
+python python/test_golden_t2.py                       # ALL PASS
+python scripts/t2/run_sims.py                         # 6 benches pass, 3 negative builds fail as expected
+python scripts/t2/verify_bundle.py                    # BUNDLE OK
+```
+On the board: `source D:/Projects/RC_Project/scripts/t2/hw_t2.tcl`, then `t2_connect ; t2_program full int16 ; t2_set_precision int8 counting`. The full demo is in [DEMO.md](docs/DEMO.md). Dry run without a board (PowerShell, from `vivado/scratch_t2/`): `vivado -mode batch -nojournal -nolog -source ../../scripts/t2/hw_t2_mock.tcl` → `MOCK TESTS PASS`.
+
 ## Documentation
 
 - [T0 guide](docs/t0/T0_Complete_Guide.md)
 - [T1 guide](docs/t1/T1_Complete_Guide.md)
 - [T2 Complete Guide](docs/t2/T2_Complete_Guide.md)
 - [T2 board runbook and session record](docs/t2/T2_BOARD_RUNBOOK.md)
+- [Project detail: the whole project, from scratch](docs/PROJECT_DETAIL.md)
+- [Demo guide and LED legend](docs/DEMO.md)

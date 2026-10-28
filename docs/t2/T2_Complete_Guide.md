@@ -13,7 +13,7 @@ Swapping the "number size" of a hardware calculator while it keeps running, on a
 - **The trick.** The calculator can work with three "number sizes": 16-bit, 8-bit and 4-bit. Smaller numbers are less exact but cheaper. We can **swap between the three while the rest of the chip keeps running**, in about **0.43 seconds**.
 - **How.** A Xilinx feature called Dynamic Function eXchange (DFX) lets us rewrite only one fenced-off region of the chip, not the whole thing.
 - **Proof.** Every result the hardware produced matched a Python reference model exactly. 23 programming operations on the real board, no failures.
-- **What we did not do.** No neural-network accuracy test, no power measurement. Those are future work (T3).
+- **What we did not do.** No neural-network accuracy test, and no power measurement on the board (power figures are Vivado estimates). Those are future work (T3).
 
 | Result | Value |
 |---|---|
@@ -22,6 +22,7 @@ Swapping the "number size" of a hardware calculator while it keeps running, on a
 | Board self-test | 14 of 14 steps passed, 58 of 58 checks |
 | Live demo: same matrices on 16, 8 and 4 bits | 144 of 144 numbers matched the reference |
 | Cost of 16-bit vs 8-bit vs 4-bit (lookup tables used) | 253 vs 1,451 vs 693 (16-bit uses 16 dedicated multipliers instead) |
+| Estimated chip power (Vivado estimate, not measured) | 0.135 W (16-bit), 0.127 W (8-bit), 0.124 W (4-bit), 0.116 W (empty) |
 
 ---
 
@@ -186,10 +187,12 @@ Vivado is Xilinx's design tool. We followed these stages:
 - **Slack** is spare time. A signal has 10 ns per tick; slack is how much is left on the slowest path. Positive means the timing is met. **Hold** slack checks that data does not change too early.
 - The identical hold slack in all four builds is expected: the fixed part is locked and shared.
 - The fixed part uses 1,300 LUTs and 2,659 flip-flops in every build (total minus the swappable region).
-- The empty module still shows 179 LUTs, equal to the number of region wires (a likely interface cost; not yet confirmed in the reports).
+- The empty module still shows 179 LUTs. The report lists them as 179 one-input LUTs, one for each region wire except the clock: the cost of the interface itself.
 - int4 is about 2.1 times smaller than int8 in LUTs, not 4 times: the adders, accumulators and control around the multipliers do not shrink with the number size.
 
-Bitstream sizes: partial 585,559 bytes, full 4,045,666 bytes. (We predicted one byte more for each; the header text differs by a character. Likely cause, not confirmed.)
+Bitstream sizes: partial 585,559 bytes, full 4,045,666 bytes. We predicted one byte more for each, from T1's files. The file header stores the design's name, and `top_t2` is one character shorter than T1's `top_dfx`.
+
+Vivado also estimates power for each build: 0.116 W (empty) to 0.135 W (int16). These are estimates from the tool, not measurements on the board; section 20 has the full table.
 
 ---
 
@@ -221,7 +224,7 @@ Swap time: average **0.43 s** (range 0.41–0.52 s). It is the same for every mo
 
 **Does not show**
 - Neural-network accuracy (no MNIST or other workload was run).
-- Power or energy (not measured).
+- On-board power. The power figures are a Vivado vectorless estimate on the routed design, confidence Medium; not measured on the board.
 - A full 9-case test of int4 on the board. int4 passed 5 case types in the self-test and 3 in the demo. The other four (identity, ones, zeros, random_inrange) passed in simulation only.
 - LED behaviour in the log (designed and simulated, not recorded).
 - Anything beyond one board, one JTAG speed and 12 timed swaps.
@@ -231,7 +234,7 @@ Swap time: average **0.43 s** (range 0.41–0.52 s). It is the same for every mo
 ## 9. What comes next (T3 ideas, not started)
 
 - Convert real-valued data to 16/8/4-bit integers on the host, run through each precision, and **measure the error against int16**.
-- Try a small real workload, and measure power.
+- Try a small real workload, and measure power on the board.
 - Close the int4 on-board test gap and photograph the LEDs.
 - Explore larger arrays or more modules in the same region, and faster reconfiguration.
 
@@ -274,6 +277,7 @@ Swap time: average **0.43 s** (range 0.41–0.52 s). It is the same for every mo
 | Topic | File |
 |---|---|
 | Timing, resources, pin count, DRC | `docs/t2/reports/build_summary.csv` |
+| Power estimate, worst-path delay, Fmax estimate | `docs/t2/reports/power_delay_summary.csv` |
 | Compatibility check | `docs/t2/reports/pr_verify.rpt` |
 | Simulation cycles and results | `docs/t2/reports/sim_cycles.csv`, `sim_summary.txt` |
 | Bitstream sizes | `bitstreams/t2/manifest.csv` |
@@ -298,375 +302,451 @@ Part II treats a module as a replaceable calculator. The static top owns clocks,
 
 ## 13. The design decisions
 
-| Decision | Reason | Consequence |
+These eleven decisions were written into the plan before any code. Each one is listed with the reason that settled it.
+
+| # | Decision | Reason |
 |---|---|---|
-| D1: reuse the T1 partition | T1 already proved the fence and static continuity | T2 inherits a known floorplan |
-| D2: freeze the interface | the static top must survive every module swap | all modules use the same 180 pins |
-| D3: keep DSP arithmetic for int16 | the device has dedicated multiply resources | int16 is compact in LUTs but uses 16 DSPs |
-| D4: use LUT multipliers for int8 and int4 | smaller lanes can be packed into configurable logic | int8 and int4 trade DSPs for LUTs |
-| D5: clamp lane inputs | signed values must stay within the selected precision | overflow behavior is deterministic |
-| D6: register both sides of the boundary | registers make the DFX contract explicit | the boundary costs two cycles |
-| D7: reuse the controller | the feed schedule does not depend on precision | every module has the same timing |
-| D8: keep output-stationary accumulation | each processing element retains one result | the readout is simple and ordered |
-| D9: expose a greybox | build and board checks need a harmless replacement | configuration can be tested without arithmetic |
-| D10: use one probes file | the static VIO names do not change | every full and partial image uses t2_full_int16.ltx |
-| D11: validate in layers | a failed board test is expensive to diagnose | Python, simulation, synthesis, implementation, mock, and board checks agree |
+| D1 | The swappable region holds the input clamps, the 4×4 array and the result select | About 180 boundary wires instead of about 900; the static side never needs to know the precision |
+| D2 | Every variant keeps 16-bit input lanes; each module clamps its own inputs at the array edge | One frozen interface; out-of-range values saturate instead of wrapping |
+| D3 | int16 reuses the T0 PE on DSP slices; int8 and int4 use LUT multipliers; accumulators are 48 / 18 / 10 bits | A clean DSP-versus-LUT comparison with exact accumulator sizes |
+| D4 | The T0 controller is reused unchanged; a registered feed stage and a start gate are added | Closes the start-gating requirement left open in T1 |
+| D5 | A and B are loaded through two 256-bit VIO probes; results are read one at a time through a selector `sel` | Any matrix can run live; the same files drive simulation and board |
+| D6 | Registers on both sides of the boundary | Every boundary path becomes register → wire → register; costs 2 cycles |
+| D7 | The cycle count is identical for every precision by construction | Measured in simulation, not assumed |
+| D8 | Reuse the T1 Pblock unchanged | Already proven on silicon; capacity 4,400 LUT, 8,800 FF, 40 DSP, 10 block RAM |
+| D9 | Four configurations: int16, int8, int4 and an empty greybox | An empty-region control almost for free, because the child runs build in parallel |
+| D10 | The Vivado project is created by a script; the builds are launched from the GUI | DFX setup is click-heavy and cannot be undone; a script is exact and reproducible |
+| D11 | Module IDs 16 / 08 / 04 (00 empty, FF decoupled); an LED badge where lit LEDs = bits ÷ 4 | The loaded precision is readable at a glance |
 
-D1 is a capacity decision as well as a history decision. The frozen interface has about 180 signals because it carries 134 inputs, 45 outputs, and a clock. A new boundary with roughly 900 wires would consume more routing and make the static contract harder to inspect. Reusing the T1 Pblock keeps the physical proof and changes only the module logic.
+**D1 in numbers.** The boundary carries 134 inputs, 45 outputs and the clock: 180 partition pins. A bare array would expose every accumulator, roughly 900 wires.
 
-D3 separates the DSP processing element from the LUT processing element. The int16 module uses the device's dedicated DSP multiply resources. The LUT PE is the int8/int4-style implementation whose multiplier is explicitly constrained with `use_dsp = "no"`; this keeps that implementation in configurable logic. The consequence is visible in the resource table: DSP usage is 16, 0, 0, and 0 for int16, int8, int4, and greybox.
+**D3 in practice.** The int16 module instantiates T0's `pe.v` and `array.v` unchanged, one DSP slice per PE. The int8 and int4 modules use `pe_lut.v`, marked `use_dsp = "no"`, so their multipliers are built from LUTs. The resource table confirms 16, 0, 0 and 0 DSP slices.
 
-D6 puts a register immediately before and immediately after the reconfigurable region. That costs two cycles, but it gives the static design a stable timing boundary and makes the safe value during decoupling explicit. It is a small, fixed cost compared with making each precision variant negotiate a different protocol.
+**D6 in practice.** One register sits on the static side and one inside the module. That adds 2 cycles to every run, the same for every precision, and gives every boundary path a full clock period.
 
-The accumulator widths are 48 bits for int16, 18 bits for int8, and 10 bits for int4. The latter two are 18 and 10, not 17 and 9: a signed product needs twice the operand width, and summing four products needs two more signed growth bits. Thus 2*8+2 = 18 and 2*4+2 = 10.
+**Accumulator widths.** A signed product needs twice the input width, and adding four products needs 2 more bits: 2×8 + 2 = 18 and 2×4 + 2 = 10. The early estimate of 17 and 9 bits was wrong because the clamp allows −128 and −8, and 4 × (−128)² = 65,536 needs 18 signed bits.
 
-*Sources: docs/t2/T2_PLAN.md, docs/t1/T1_Complete_Guide.md, rtl/t2/rm/rm_int16.v, rtl/t2/rm/rm_int8.v, rtl/t2/rm/rm_int4.v*
+*Sources: docs/t2/T2_PLAN.md (section 2), rtl/t2/rm/rm_int16.v, rtl/t2/rm/pe_lut.v, docs/t2/reports/build_summary.csv*
 
 ## 14. The architecture in detail
 
-The static top instantiates the controller, feed registers, the reconfigurable partition, the decoupler, uptime counter, heartbeat, and VIO-facing status. The controller reuses the T0 feed schedule. The start gate blocks a new operation while the `blocked` flag is asserted and increments the runs counter only for an accepted start. The done flag is a registered completion indication.
+The **static top** `top_t2` holds the reset synchroniser, the uptime counter and heartbeat, the VIO core, the T0 controller, the feed registers, the start gate, the done flag, the decoupler and the LED drivers. The **swappable region** `U_RP` holds only the arithmetic that changes.
 
-The decoupler is 45 bits wide. During a swap it drives its safe value instead of allowing changing signals to cross the boundary. Uptime and heartbeat provide a visible static-region liveness signal. The LED map reports reset, busy, done, blocked, overflow, and the selected module badge. Module IDs distinguish int16, int8, int4, and greybox.
+- **Start gate.** A start is accepted only when the module is out of reset, the region is not decoupled and no run is busy. A refused start sets a sticky `blocked` flag, cleared by the next accepted start. Accepted starts increment a `runs` counter.
+- **Decoupler.** 45 bits wide, one per output wire. While decoupled it outputs safe values: result 0, overflow 0, ID FF, LEDs off.
+- **LEDs.** LD3..LD0 show the module's badge, LD4 the done flag, LD5 the decouple state, LD6 the module reset, LD7 the static heartbeat.
 
-| Port group | Width | Direction | Meaning |
+### The frozen boundary
+
+| Signal | Width | Direction | Meaning |
 |---|---:|---|---|
-| clock and reset | 2 | in | board clock and reset control |
-| matrix input lanes | 128 | in | packed A and B values for the four-by-four operation |
-| start and control | 4 | in | start, mode, and VIO control signals |
-| static status | 2 | out | done and overflow |
-| matrix result | 32 | out | selected signed result word |
-| module badge | 4 | out | active reconfigurable module ID |
-| safety and counters | 7 | out | blocked, heartbeat, uptime and run status |
+| `clk` | 1 | in | 100 MHz clock |
+| `rst_n` | 1 | in | module reset, held low while decoupled |
+| `clr_acc` | 1 | in | clear the accumulators at the start of a run |
+| `west_bus` | 64 | in | four 16-bit A lanes from the static feed register |
+| `north_bus` | 64 | in | four 16-bit B lanes from the static feed register |
+| `sel` | 4 | in | which of the 16 results to output |
+| `result` | 32 | out | C[sel] as a 32-bit signed number |
+| `ovf` | 1 | out | the result was clamped (possible only in int16) |
+| `rm_id` | 8 | out | module identity code |
+| `led_pat` | 4 | out | LED badge pattern |
 
-The frozen contract is 134 inputs, 45 outputs, and one clock: 180 partition pins in total. The exact names and widths are read from the RM module ports, not inferred from the board display.
+Inputs 134, outputs 45, plus the clock: 180 partition pins. The port list is byte-identical in all three module files.
+
+### One calculation
 
 ```mermaid
 sequenceDiagram
   participant C as Controller
-  participant F as Feed registers
-  participant R as Reconfigurable module
-  participant O as Output register
-  C->>F: accepted start
-  F->>R: registered operands
-  R-->>O: accumulated result
-  O-->>C: done after 12 compute cycles + 2 boundary cycles + 1 completion cycle
+  participant F as Feed register (static)
+  participant R as Module input register and array
+  participant D as Done flag (static)
+  C->>F: accepted start, staircase feed
+  F->>R: registered lanes (1 cycle)
+  R->>R: input register (1 cycle), multiply-accumulate
+  R-->>D: accumulators final
+  D-->>C: done after 12 + 2 + 1 = 15 cycles
 ```
 
-The latency budget is CT_CYCLES 12 plus two boundary cycles plus one completion cycle, so start-to-done is 15 cycles for every module.
+The controller needs 12 cycles, the two boundary registers add 2, and the done flag adds 1: **15 cycles (150 ns) for every module and every test case**.
+
+### One swap
 
 ```mermaid
 sequenceDiagram
-  participant H as Host/VIO
-  participant S as Static top
+  participant H as Laptop (Tcl script)
+  participant S as Static region
   participant D as Decoupler
-  participant P as Partial image
-  H->>S: stop new starts
-  S->>D: assert blocked and drive safe values
-  H->>P: program child partial bitstream
-  P-->>D: new module is present
-  H->>S: refresh VIO and release block
-  S-->>H: module badge and heartbeat remain live
+  participant R as Swappable region
+  H->>S: write vio_decouple = 1
+  S->>D: force outputs to safe values (result 0, ID FF)
+  S->>R: hold module in reset, refuse starts
+  H->>R: load partial bitstream over JTAG
+  H->>S: write vio_decouple = 0
+  R-->>S: new module leaves reset and reports its ID
 ```
 
-![RTL schematic](img/rtl_schematic.png)
+![Elaborated schematic of the static top top_t2](img/rtl_schematic.png)
 
-*Caption: RTL schematic exported from Vivado.*
+*Vivado's elaborated schematic of `top_t2` (182 cells, 10 I/O ports, 968 nets): the static logic, with the swappable region `U_RP`, the VIO and the decoupler each shown as one block.*
 
-*Sources: rtl/t2/top_t2.v, rtl/t2/rm/rm_int16.v, rtl/t2/rm/rm_int8.v, rtl/t2/rm/rm_int4.v, rtl/t2/rm/rm_grey.v, rtl/t2/dfx_decouple.v, docs/t2/T2_PLAN.md*
+*Sources: rtl/t2/top_t2.v, rtl/t2/rm/rm_int8.v, rtl/t1/dfx_decouple.v, docs/t2/T2_PLAN.md (sections 3 and 4)*
 
 ## 15. The hardware, module by module
 
-| Module | Arithmetic | Accumulator | DSP use | Purpose |
-|---|---|---:|---:|---|
-| int16 | signed 16-bit multiply | 48 bits | 16 | highest precision reference path |
-| int8 | signed 8-bit multiply | 18 bits | 0 | smaller LUT-based path |
-| int4 | signed 4-bit multiply | 10 bits | 0 | smallest arithmetic path |
-| greybox | protected constants | none | 0 | safe configuration and routing check |
+| Module | Input stage | PE | Accumulator | Output | DSP slices |
+|---|---|---|---:|---|---:|
+| int16 | pass-through | T0 PE on a DSP slice | 48 bits | clamp 48 → 32 bits, sets `ovf` | 16 |
+| int8 | clamp each lane to 8 bits | LUT multiplier | 18 bits | sign-extend to 32 bits | 0 |
+| int4 | clamp each lane to 4 bits | LUT multiplier | 10 bits | sign-extend to 32 bits | 0 |
+| greybox | none | none | none | Vivado ties every boundary wire with a one-input LUT | 0 |
 
-The array is a four-by-four mesh of processing elements. Each PE receives a value from the left and a value from above, multiplies them, adds the product to its stationary accumulator, and forwards the operands to its neighbors. The controller supplies the staircase feed so that corresponding operands meet at the correct cycle.
+The 4×4 array is a grid of 16 PEs. Each PE receives a value from the west and one from the north, multiplies them, adds the product to its own accumulator and passes the inputs on. The controller's staircase makes the right values meet at the right PE.
 
-The LUT PE clamps each input lane before multiplication. This is different from merely truncating the final result: the selected precision is enforced at the lane boundary, so every module sees a defined signed operand. The readout then clamps the selected result to 32 bits. The int16 path can instead sign-extend its narrower internal view when the value is already in range.
+**Clamping happens on the way in.** int8 and int4 clamp each 16-bit lane once, at the array edge, to the full range of their width. The array then works on narrow numbers. On the way out, int16 clamps its 48-bit total to 32 bits and raises `ovf` when it does; int8 and int4 cannot overflow 32 bits, so they only sign-extend.
 
-The greybox and badge logic drive constant outputs through protected registers. A constant registered output is safer across configuration because it does not depend on an uninitialized combinational cone during the interval in which the reconfigurable region is being replaced. The badge gives the host a simple proof of which module is loaded.
+**Outputs are always driven by registers.** `rm_id`, the LED badge and the constant `ovf` of int8/int4 come from registers marked `dont_touch`, so Vivado cannot replace them with constants (gotcha G20). Every boundary wire is then driven by a flip-flop.
 
-The following short excerpt shows the input clamp shape used by the LUT-oriented arithmetic. It is intentionally small: the point is the signed boundary, not a retyped implementation.
+The clamp itself is three lines:
 
 ```verilog
-// Input values are narrowed before the multiply mesh sees them.
-always_comb begin
-  lane_a = clamp_signed(a_in, PRECISION);
-  lane_b = clamp_signed(b_in, PRECISION);
-end
+// rm_common.v, module lane_sat: clamp a 16-bit lane to OUT_W bits
+assign y = (x > HI) ? HI[OUT_W-1:0] :
+           (x < LO) ? LO[OUT_W-1:0] :
+                      x[OUT_W-1:0];
 ```
 
-Caption: lane-clamp logic in the LUT processing-element source.
+`HI` and `LO` are the largest and smallest values of the target width: 127 and −128 for int8, 7 and −8 for int4.
 
-A second boundary register holds the selected result before it crosses into the static readout. This is the hardware reason the interface costs two cycles and why a partial image can be swapped without changing the static port list.
-
-*Sources: rtl/t2/top_t2.v, rtl/t2/rm/rm_int16.v, rtl/t2/rm/rm_int8.v, rtl/t2/rm/rm_int4.v, rtl/t2/rm/rm_grey.v, docs/t2/T2_PLAN.md*
+*Sources: rtl/t2/rm/rm_common.v, rtl/t2/rm/rm_int16.v, rtl/t2/rm/rm_int8.v, rtl/t2/rm/rm_int4.v, rtl/t2/rm/pe_lut.v, docs/t2/reports/cfg_grey_utilization_U_RP.rpt*
 
 ## 16. The reference model and the test cases
 
-The Python golden model computes the same output-stationary operation as the RTL: signed operands are interpreted at the selected precision, products are accumulated in the selected accumulator width, and the final values are compared with the expected matrix. The model is the reference for simulation vectors, the mock board, and the real-board answer files.
+The Python golden model computes what each module must output, bit for bit: clamp the inputs to the precision, multiply, accumulate in the module's width, then convert to 32 bits. It writes one answer key per case and precision. The same files drive the simulation benches, the software mock of the board and the real board.
 
 | Case | What it catches |
 |---|---|
 | zeros | reset and all-zero propagation |
-| ones | basic accumulation |
-| identity | row/column routing |
-| counting | feed order and hand-checkable values |
-| random | ordinary signed arithmetic |
-| extremes | saturation and sign boundaries |
-| alternating | sign changes and lane timing |
-| impulse | one active operand path |
-| asymmetric | transposition and operand-order mistakes |
+| ones | basic accumulation (every result is 4) |
+| identity | lane routing (C equals A) |
+| counting | feed order; hand-checkable (C[0][2] = 110 in int16) |
+| asym_small | transposes that a symmetric case would hide |
+| random_inrange | ordinary arithmetic with values that fit every precision |
+| random_full | input clamping at the array edge |
+| extremes_neg | accumulator width and positive saturation (every input −32,768) |
+| extremes_mix | negative saturation and sign handling (−32,768 times 32,767) |
 
-The board probe string is a 64-hex-digit representation of the packed 16-element answer matrix. A[3][3] is placed first in the packing order, followed by the remaining elements in the defined reverse traversal. The host and Tcl scripts use the same order, so a displayed probe value can be compared directly with a generated answer file.
+**Precision-sensitive cases matter.** Small values give the same answer in every precision, so a wrong-width module could pass them. `random_full` and the two `extremes` cases give different answers per precision (gotcha G17).
 
-For the counting vectors, the 4x4 result is the same mathematical matrix when the values fit the selected precision. The int16, int8, and int4 cases therefore provide a useful routing check, while the extreme cases expose the intentional precision differences. The expected values are generated once and then consumed by Python, simulation, the board mock, and the board script.
+**How matrices reach the chip.** A and B each travel as one 256-bit VIO probe: 16 values × 16 bits, written as 64 hex digits. The first hex digit is the top 4 bits of A[3][3]; the last four digits are A[0][0] (gotcha G18). Results are read one at a time: the script sets `sel` and reads one 32-bit value.
 
-That shared answer-file path matters. It prevents the simulator, mock harness, and board procedure from quietly using different packing conventions. A mismatch is either an arithmetic mismatch or a transport/packing mismatch, rather than an ambiguous mixture of both.
-
-*Sources: python/golden_t2.py, python/gen_vectors_t2.py, python/test_golden_t2.py, scripts/t2/hw_t2.tcl, scripts/t2/hw_t2_mock.tcl, sim/t2_vectors, docs/t2/T2_PLAN.md*
+*Sources: python/golden_t2.py, python/gen_vectors_t2.py, python/test_golden_t2.py, scripts/t2/hw_t2.tcl, sim/t2_vectors, docs/t2/T2_PLAN.md (section 7)*
 
 ## 17. Verification before Vivado
 
-Verification is layered so that a board failure has a small search area. The RP bench checks a reconfigurable module in isolation. The top bench checks the static wrapper, VIO stub, decoupler, and status signals together. The six positive builds cover the supported arithmetic configurations and their expected interfaces. Three negative builds deliberately violate the contract; `sim_summary.txt` records the reason each one fails.
+The checks are layered, so a failure on the board has a small search area.
 
-The project uses XSim for the T2 top-level checks. Icarus Verilog 0.9.7 rejects T0's two-dimensional net arrays, so XSim is the simulator used for this stage. That is a tool limitation, not a change to the arithmetic reference.
+| Layer | What ran | Result |
+|---|---|---|
+| Golden model self-checks | `test_golden_t2.py` | ALL PASS |
+| Region bench (`tb_rp_t2`), one build per module | 9 cases per module | 3 of 3 pass |
+| Whole-design bench (`tb_top_t2`), one build per module | 9 cases per module, cycle counts, start gate | 3 of 3 pass |
+| Negative builds | N1 int16 module in the int8 bench; N2 int8 module in the int4 bench; N3 start gate removed | 3 of 3 fail for the expected reason |
+| Cycle count | 27 (module, case) pairs | 12 controller cycles (`CT_CYCLES`) and 15 start-to-done in every pair |
+| Out-of-context synthesis | each module alone | all gates pass (table below) |
+| Scratch project | the project script, including synthesis of all runs, in a throw-away folder | `SCRATCH OK` |
 
-| Out-of-context gate | LUT | FF | Result |
-|---|---:|---:|---|
-| int16 | 254 | recorded in report | pass |
-| int8 | 1,442 | recorded in report | pass |
-| int4 | 597 | recorded in report | pass |
+All benches ran in Vivado's XSim simulator. The installed Icarus Verilog 0.9.7 cannot read T0's two-dimensional net arrays, so it was used only as a compile check on the builds that do not include `rtl/array.v`.
 
-The in-project int4 synthesis reports 674 LUTs, which is a different measurement from the out-of-context gate because the project wrapper and implementation context are included. The OOC checks are gates on the module contract; they are not substitutes for the full implementation reports.
+**Out-of-context synthesis** builds each module alone, before the real project exists. Gates: at most 2,200 LUTs (half the fence), DSPs exactly 16 / 0 / 0, no block RAM, positive estimated slack.
 
-The scratch-project validation confirms that the project is project-ready and that the scratch build is OK. The Tcl project script then becomes the reproducible bridge from source files to the Vivado project rather than relying on a hidden GUI state.
+| Module | LUT | FF | DSP | Estimated slack (ns) | Gates |
+|---|---:|---:|---:|---:|---|
+| rm_int16 | 254 | 166 | 16 | +5.246 | pass |
+| rm_int8 | 1,442 | 600 | 0 | +2.631 | pass |
+| rm_int4 | 597 | 336 | 0 | +4.139 | pass |
 
-The simulation summary also records the negative cases. Each negative build is useful because it proves that the test harness can detect a wrong module shape, an invalid timing/configuration assumption, or a deliberately malformed connection. Passing only positive tests would not establish that the contract is enforced.
+The LUT counts differ a little from the implemented design (253 / 1,451 / 693) because out-of-context synthesis sees each module without its surroundings.
 
-*Sources: docs/t2/reports/sim_summary.txt, docs/t2/reports/ooc_summary.csv, docs/t2/reports/scratch_validation.log, scripts/t2/run_sims.py, scripts/t2/ooc_check.tcl, tb/t2/tb_rp_t2.v, tb/t2/tb_top_t2.v*
+*Sources: docs/t2/reports/sim_summary.txt, docs/t2/reports/sim_cycles.csv, docs/t2/reports/ooc_summary.csv, docs/t2/reports/scratch_validation.log, docs/t2/T2_PLAN.md (sections 8 and 16)*
 
 ## 18. The Vivado flow and the child runs
 
 ### 18.1 Creating the project by script
 
-`create_project_t2.tcl` replaces a long sequence of GUI actions. It creates the project for `xc7z020clg484-1`, adds RTL and constraints, defines the static top and reconfigurable partition, adds the module filesets, and creates the synthesis and implementation runs. In the GUI these actions correspond to creating a project, adding sources, adding constraints, defining the DFX configuration, and launching runs. The script makes the order visible and repeatable.
+`create_project_t2.tcl` replaces a long series of GUI clicks. It creates the project for `xc7z020clg484-1`, adds the static sources, the constraints and the VIO core, defines the partition `pd_t2` on `U_RP`, adds the three modules, and creates the four configurations and their runs. The human then opened the project in the GUI, checked every object, and launched synthesis and implementation from there (decision D10).
 
 ### 18.2 The floorplan
 
-The Zynq-7000 fabric is divided into clock regions. T2 uses the right part of clock region X1Y1. A configuration column at RPM_X 205 splits the region; the left side does not provide the DSP column needed by the int16 implementation, while the chosen side contains the two relevant DSP columns and nearby block RAM sites. That is why the fence is a physical resource decision, not just a rectangle drawn for convenience.
-
-The Pblock ranges are:
+The Zynq-7020's programmable logic is divided into six clock regions. A column of configuration sites runs through region X1Y1 at device grid position RPM_X 205 and splits it. The left part has no DSP column, so it could never hold the int16 module. The fence uses the right part:
 
 ```tcl
 resize_pblock [get_pblocks pblock_U_RP] -add {SLICE_X80Y50:SLICE_X103Y99}
 resize_pblock [get_pblocks pblock_U_RP] -add {DSP48_X3Y20:DSP48_X4Y39}
 resize_pblock [get_pblocks pblock_U_RP] -add {RAMB18_X4Y20:RAMB18_X4Y39}
 resize_pblock [get_pblocks pblock_U_RP] -add {RAMB36_X4Y10:RAMB36_X4Y19}
-set_property CLOCKREGION X1Y1 [get_pblocks pblock_U_RP]
 ```
 
-Block RAM is listed by site-name ranges because those are the physical resources Vivado places, while the clock-region label describes the larger timing and clocking neighborhood. The T2 checks query `get_property GRID_RANGES` on the Pblock, use `get_cells -of_objects` to inspect what is inside it, and run `report_drc`.
-
-T2 reused the T1 Pblock because T1 had already proved the DFX boundary and static behavior. The region has enough capacity for the T2 module resources: the largest module uses 1,451 LUTs, while the region has 4,400 LUTs available in the earlier T1 accounting. Reuse is safe here because the T2 module needs remain inside the established fence and the static interface is frozen.
+The Pblock utilisation report gives its capacity: 4,400 LUTs, 8,800 flip-flops, 40 DSP slices, 10 block RAMs. The largest module, int8, uses 1,451 LUTs, 32.98% of it.
 
 ### 18.3 Synthesis
 
-The five synthesis configurations are the static parent plus the int16, int8, int4, and greybox module configurations. Each module is synthesized with the same interface. The parent establishes the static design; each child configuration supplies one implementation of the replaceable logic.
-
-*Sources: scripts/t2/create_project_t2.tcl, constraints/top_t2_pblock.xdc, docs/t1/T1_Complete_Guide.md, docs/t2/T2_PLAN.md, docs/t2/reports/cfg_int16_timing_summary.rpt*
+Five synthesis runs: `synth_1` for the static design (the region is a black box there, as expected), `rm_int16_synth_1`, `rm_int8_synth_1`, `rm_int4_synth_1`, and `vio_t2_synth_1` for the VIO core. The greybox needs no synthesis; Vivado creates it during implementation.
 
 ### 18.4 Parent and child implementation runs
 
-The parent run implements the whole design and locks the static routing. A child run reuses that locked static part and implements only its reconfigurable module. Because the static work is shared, the child implementations can run in parallel after the parent checkpoint exists.
+The **parent run** places and routes the whole design with the int16 module and locks the static region. Each **child run** reuses that locked static region and implements only its own module, so the three children run in parallel.
 
-| Run | Configuration | Module | Main files produced |
-|---|---|---|---|
-| impl_1 | cfg_int16 | int16 | top_t2.bit, routed checkpoint |
-| child_0_impl_1 | cfg_int8 | int8 | partial bitstream, routed checkpoint |
-| child_1_impl_1 | cfg_int4 | int4 | partial bitstream, routed checkpoint |
-| child_2_impl_1 | cfg_grey | greybox | partial bitstream, routed checkpoint |
+| Run | Configuration | Bitstreams produced |
+|---|---|---|
+| `impl_1` (parent) | `cfg_int16` | `top_t2.bit` (full), `U_RP_rm_int16_partial.bit` |
+| `child_0_impl_1` | `cfg_int8` | `top_t2.bit` (full), `U_RP_rm_int8_partial.bit` |
+| `child_1_impl_1` | `cfg_int4` | `top_t2.bit` (full), `U_RP_rm_int4_partial.bit` |
+| `child_2_impl_1` | `cfg_grey` | `top_t2.bit` (full), `U_RP_greybox_partial.bit` |
 
-![Design runs](img/Child_runs_impl.png)
+![Design runs and the fenced region after implementation](img/Child_runs_impl.png)
 
-*Caption: Vivado design runs, parent and child implementation runs.*
+*Vivado after implementation. Top right: the Device view with `U_RP`'s fence in the right part of clock region X1Y1. Bottom: the Design Runs table with the parent `impl_1` (cfg_int16) and the three child runs, each showing WNS, WHS and total power, plus the out-of-context synthesis runs of the VIO and the three modules.*
 
-![Implementation](img/impl.png)
+![Implemented int16 design: power and timing summary](img/impl.png)
 
-*Caption: Vivado implementation result.*
+*The implemented parent design (`impl_1`, cfg_int16). Power panel: 0.135 W total on-chip, 0.032 W dynamic, 0.103 W static (a Vivado estimate). Timing panel: WNS 2.135 ns, WHS 0.088 ns, all constraints met.*
 
 ### 18.5 Results
 
-| Configuration | WNS (ns) | WHS (ns) | LUT | FF | DSP |
+| Configuration | WNS (ns) | WHS (ns) | Region LUT | Region FF | DSP |
 |---|---:|---:|---:|---:|---:|
-| int16 | 2.135 | 0.088 | 253 | 166 | 16 |
-| int8 | 1.481 | 0.088 | 1,451 | 600 | 0 |
-| int4 | 2.981 | 0.088 | 693 | 336 | 0 |
-| greybox | 2.981 | 0.088 | 179 | 1 | 0 |
+| int16 | +2.135 | +0.088 | 253 | 166 | 16 |
+| int8 | +1.481 | +0.088 | 1,451 | 600 | 0 |
+| int4 | +2.981 | +0.088 | 693 | 336 | 0 |
+| greybox | +2.981 | +0.088 | 179 | 1 | 0 |
 
-WNS is worst negative slack, the timing margin for setup. A positive value means the path meets the 100 MHz requirement with that much margin. WHS is worst hold slack. It is identical in all four builds because the static clocking and boundary timing are shared. The static region is 1,300 LUTs and 2,659 FFs in every build when calculated as total design resources minus the module region resources.
-
-The timing reports identify the worst setup path for each configuration by its start point, end point, logic levels, and slack. The report values are the authority for those path details; the summary table above preserves the four WNS values. DRC reports 0 errors, and `pr_verify.rpt` reports a passing partial-reconfiguration verification.
+**WNS** (worst negative slack) is the spare time on the slowest path in a 10 ns clock period; positive means the timing is met. **WHS** (worst hold slack) checks that data does not change too early. WHS is identical in all four builds because the static region is locked and shared. The static region costs 1,300 LUTs and 2,659 flip-flops in every build (whole design minus the region). DRC reports 0 errors in all four builds, and `pr_verify` passes with 180 partition pins compared.
 
 ### 18.6 Collecting the bitstreams
 
-The collection script has a staleness guard: it checks that the source run artifacts belong to the current build before copying them into `bitstreams/t2`. The manifest records each collected file, byte count, checksum, and source run. The full image is 4,045,666 bytes and a partial image is 585,559 bytes; the plan's earlier predictions were 4,045,667 and 585,560 bytes.
+`collect_bitstreams.py` copies the eight bitstreams and the probes file into `bitstreams/t2/`. Its staleness guard refuses any file older than its source checkpoint. `manifest.csv` records each file's size, SHA-256 checksum and source run. `verify_bundle.py` re-checks all nine files against the manifest and prints `BUNDLE OK`.
 
-The bundle check verifies that the manifest, full images, partial images, and probes file are present and consistent. Every programming step uses `t2_full_int16.ltx` because the VIO probes are static and the frozen interface does not change when the arithmetic module changes.
+| File | Bytes |
+|---|---:|
+| `t2_full_{int16,int8,int4,grey}.bit` | 4,045,666 each |
+| `t2_partial_{int16,int8,int4,grey}.bit` | 585,559 each |
+| `t2_full_int16.ltx` (probes file) | 110,316 |
 
-*Sources: scripts/t2/collect_bitstreams.py, scripts/t2/verify_bundle.py, scripts/t2/reports_t2.tcl, docs/t2/reports/build_summary.csv, docs/t2/reports/pr_verify.rpt, docs/t2/reports/cfg_int16_timing_summary.rpt, bitstreams/t2/manifest.csv*
+One probes file serves every programming step, because the VIO lives in the static region and never changes.
+
+*Sources: scripts/t2/create_project_t2.tcl, constraints/top_t2_pblock.xdc, docs/t1/T1_Complete_Guide.md, docs/t2/reports/build_summary.csv, docs/t2/reports/cfg_int16_utilization_pblock.rpt, docs/t2/reports/pr_verify.rpt, bitstreams/t2/manifest.csv*
 
 ## 19. The board session (2026-10-22)
 
-### 19.1 Setup and Tcl commands
+### 19.1 Setup and commands
+
+ZedBoard, Vivado Hardware Manager, JTAG clock **15,000,000 Hz** (printed by `t2_connect`). The script `hw_t2.tcl` wraps the Hardware Manager commands:
 
 | Command | What it does | Vivado operation underneath |
 |---|---|---|
-| `t2_connect` | connect to the ZedBoard | `open_hw_manager`, `connect_hw_server`, `open_hw_target` |
-| `t2_program full int16` | load the full static image | set `PROGRAM.FILE`, set `PROBES.FILE`, `program_hw_devices` |
-| `t2_probes` | resolve the VIO probes | `get_hw_vios`, `get_hw_probes` |
-| `t2_check ones` | write inputs and read one answer | `set_property OUTPUT_VALUE`, `commit_hw_vio`, `refresh_hw_vio`, `get_property INPUT_VALUE` |
-| `t2_swap_demo int8` | decouple and load a partial image | set decouple, program the partial, refresh the device |
-| `t2_status` | read badge, uptime, and counters | refresh VIO and read `INPUT_VALUE` |
-
-The script uses a 15,000,000 Hz JTAG clock. The runbook's session sheet records the connection, the full int16 image, probe resolution, checks, swaps, demo, and self-test in that order.
+| `t2_connect` | connect to the board | `open_hw_manager`, `connect_hw_server`, `open_hw_target` |
+| `t2_program full int16` | load the full design | set `PROGRAM.FILE` and `PROBES.FILE`, `program_hw_devices` |
+| `t2_probes` | find the 11 VIO probes by name | `get_hw_vios`, `get_hw_probes` |
+| `t2_check ones` | load one case, run it, compare with the golden file | set `OUTPUT_VALUE`, `commit_hw_vio`, `refresh_hw_vio`, read `INPUT_VALUE` |
+| `t2_swap_demo int8` | decouple, load a partial, release, verify | VIO writes plus `program_hw_devices` |
+| `t2_status` | read ID, uptime, flags and run count | `refresh_hw_vio`, read `INPUT_VALUE` |
 
 ### 19.2 Session sequence
 
-The recorded sequence first loaded full int16, resolved all 11 probes, and checked the simple ones case. It then ran the int16 and int8 checks, tested start gating, ran the three-precision demo, loaded greybox and int16, ran a full-program contrast, and finished with the 14-step self-test. The int4 swap and board-wide int4 case sweep were not part of the recorded live session; the CSV and limits section preserve that distinction.
+1. Full int16 loaded; all 11 probes resolved; `ones` passed.
+2. All 9 cases on int16: 9 of 9. Swap to int8 (431 ms), all 9 cases: 9 of 9.
+3. Start-gating test: refused while decoupled and while the module was held in reset; accepted after release.
+4. Demo: the same three cases through int16, int8, int4, then back to int16.
+5. Swap to greybox and back to int16; full-program contrast (uptime reset 1,006 → 0 s, as expected).
+6. Self-test: 2 full programs and 12 swaps.
+
+The planned int4 swap and 9-case int4 sweep (runbook rows 10 and 11) were skipped. int4 was exercised in the demo and in the self-test.
 
 ### 19.3 Demo result
 
-The demo CSV contains 144 rows and 0 mismatches. It compares hardware and golden values across the recorded precision configurations. It is evidence for the displayed demo rows, not a claim that every possible int4 input was tested on the board.
+| Case | int16 C[0][2] | int8 C[0][2] | int4 C[0][2] | Elements equal to int16 (int8 / int4) |
+|---|---:|---:|---:|---|
+| counting | 110 | 110 | 70 | 16 / 1 |
+| random_full | −184,541,856 | 256 | 16 | 0 / 0 |
+| extremes_neg | 2,147,483,647 (overflow) | 65,536 | 256 | 0 / 0 |
 
-### 19.4 Self-test CSV
+144 rows (3 cases × 3 precisions × 16 elements), 0 mismatches against the golden model. In `extremes_neg`, all 16 int16 elements saturate with the overflow flag set. Demo swaps: int8 417 ms, int4 416 ms.
 
-| Step | Operation | ms | Uptime before -> after | ID | Cases | Verdict |
+### 19.4 Self-test
+
+| Step | Operation | ms | Uptime before → after (s) | ID | Cases | Verdict |
 |---:|---|---:|---|---|---:|---|
-| 1 | full int16 | 2504 | - -> 2 | 16 | 5/5 | PASS |
-| 2 | full int16 | 2497 | 3 -> 0 | 16 | 5/5 | PASS |
-| 3 | partial int8 | 421 | 2 -> 3 | 08 | 5/5 | PASS |
-| 4 | partial int4 | 436 | 5 -> 6 | 04 | 5/5 | PASS |
-| 5 | partial grey | 415 | 7 -> 8 | 00 | 1/1 | PASS |
-| 6 | partial int16 | 419 | 9 -> 10 | 16 | 5/5 | PASS |
-| 7 | partial int8 | 418 | 12 -> 12 | 08 | 5/5 | PASS |
-| 8 | partial int4 | 436 | 14 -> 15 | 04 | 5/5 | PASS |
-| 9 | partial grey | 416 | 17 -> 18 | 00 | 1/1 | PASS |
-| 10 | partial int16 | 414 | 18 -> 19 | 16 | 5/5 | PASS |
-| 11 | partial int8 | 518 | 21 -> 22 | 08 | 5/5 | PASS |
-| 12 | partial int4 | 427 | 24 -> 25 | 04 | 5/5 | PASS |
-| 13 | partial grey | 421 | 27 -> 28 | 00 | 1/1 | PASS |
-| 14 | partial int16 | 411 | 28 -> 29 | 16 | 5/5 | PASS |
+| 1 | full int16 | 2,504 | – → 2 | 16 | 5/5 | PASS |
+| 2 | full int16 | 2,497 | 3 → 0 | 16 | 5/5 | PASS |
+| 3 | partial int8 | 421 | 2 → 3 | 08 | 5/5 | PASS |
+| 4 | partial int4 | 436 | 5 → 6 | 04 | 5/5 | PASS |
+| 5 | partial grey | 415 | 7 → 8 | 00 | 1/1 | PASS |
+| 6 | partial int16 | 419 | 9 → 10 | 16 | 5/5 | PASS |
+| 7 | partial int8 | 418 | 12 → 12 | 08 | 5/5 | PASS |
+| 8 | partial int4 | 436 | 14 → 15 | 04 | 5/5 | PASS |
+| 9 | partial grey | 416 | 17 → 18 | 00 | 1/1 | PASS |
+| 10 | partial int16 | 414 | 18 → 19 | 16 | 5/5 | PASS |
+| 11 | partial int8 | 518 | 21 → 22 | 08 | 5/5 | PASS |
+| 12 | partial int4 | 427 | 24 → 25 | 04 | 5/5 | PASS |
+| 13 | partial grey | 421 | 27 → 28 | 00 | 1/1 | PASS |
+| 14 | partial int16 | 411 | 28 → 29 | 16 | 5/5 | PASS |
 
-This is 14/14 steps and 58/58 case checks. The partial mean is 429.3 ms (N = 12, standard deviation 29.1 ms, minimum 411 ms, maximum 518 ms). The two full programs have mean 2,500.5 ms.
+14 of 14 steps, 58/58 case checks. The five cases per step are `counting`, `asym_small`, `random_full`, `extremes_neg` and `extremes_mix`; the greybox step runs one case, `counting`, against the empty module's expected output.
 
-### 19.5 Start gating and file order
+| Statistic | Partial swaps | Full programs |
+|---|---:|---:|
+| N | 12 | 2 |
+| Mean (ms) | 429.3 | 2,500.5 |
+| Standard deviation (ms) | 29.1 | – |
+| Min – max (ms) | 411 – 518 | 2,497 – 2,504 |
 
-The start-gating test refuses a start while the region is decoupled or blocked. A full int16 image is loaded first because it supplies the static design and the probes. The partial images then come from the child runs: int8, int4, greybox, and int16. The probe file remains `t2_full_int16.ltx` for every programming step.
+Whole session: **23 programs (19 partial, 4 full), none failed.**
 
-### 19.6 Mock and warning
+### 19.5 The software mock
 
-The software mock simulates connection, programming, VIO reads/writes, decoupling, module IDs, timing, answer checks, and uptime. It contains 17 positive checks and five deliberate faults, each paired with the check that should catch it. The harmless Labtools 27-1952 warning concerns a VIO value cache refresh; it is not evidence of arithmetic failure. The LED behavior belongs to `docs/DEMO.md`, not to the hardware log.
+Before the lab, `hw_t2_mock.tcl` replaced the Hardware Manager with a software model of the board: programming, VIO reads and writes, decoupling, module IDs, uptime and answers. It runs **22 positive checks** and **5 deliberate faults**, each of which must be caught: a partial that resets uptime, reversed probe lanes, int8 without its input clamp, a start accepted while decoupled, and a partial loaded onto a blank chip. The mock caught two real script bugs before the board was touched (section 21).
 
-*Sources: scripts/t2/hw_t2.tcl, scripts/t2/hw_t2_mock.tcl, docs/t2/T2_BOARD_RUNBOOK.md, docs/t2/reports/hw_session_20261022.log, docs/t2/reports/hw_selftest_20261022_134926.csv, docs/t2/reports/hw_demo_20261022_134038.csv*
+The only warnings in the session log are `[Labtools 27-1952]` after full programs: Vivado's cached VIO values differ from the freshly reset chip. They are harmless; the script rewrites the values before reading.
+
+*Sources: docs/t2/reports/hw_session_20261022.log, docs/t2/reports/hw_demo_20261022_134038.csv, docs/t2/reports/hw_selftest_20261022_134926.csv, docs/t2/T2_BOARD_RUNBOOK.md (section F), scripts/t2/hw_t2.tcl, scripts/t2/hw_t2_mock.tcl*
 
 ## 20. What the numbers mean
 
-| Module | LUT | DSP | What the trade means |
-|---|---:|---:|---|
-| int16 | 253 | 16 | dedicated multipliers keep LUT use low |
-| int8 | 1,451 | 0 | LUT multipliers cost configurable logic |
-| int4 | 693 | 0 | narrower LUT arithmetic is smaller, but not one quarter of int8 |
-| greybox | 179 | 0 | protected constants and interface logic only |
+### 20.1 Resources, delay and power
 
-Int4 is about 2.1 times smaller than int8 in the reported module LUT values, not four times smaller. The implementation still includes the same array shape, clamps, registers, readout, and control; only the arithmetic width shrinks. Width is therefore not the only contributor to area.
+| Configuration | LUTs, whole design | LUTs, swappable region | DSPs | Worst-path delay (ns) | Estimated Fmax (MHz) | Total power (W) | Dynamic power (W) |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| int16 | 1,553 | 253 | 16 | 7.732 | 127.1 | 0.135 | 0.032 |
+| int8 | 2,751 | 1,451 | 0 | 8.538 | 117.4 | 0.127 | 0.021 |
+| int4 | 1,993 | 693 | 0 | 6.532 | 142.5 | 0.124 | 0.017 |
+| Empty (greybox) | 1,479 | 179 | 0 | 6.532 | 142.5 | 0.116 | 0.013 |
 
-The 12 partial swaps average 429.3 ms at a 15 MHz JTAG clock. The effective transfer rate is approximately 585,559 bytes divided by the measured time, about 1.1 MB/s. A two-point fit from the recorded data is 0.599 microseconds per byte plus 0.079 s. T1's fit was 2.21 microseconds per byte plus 0.13 s, so T2's measured transfer behavior is faster in this session. The swap time does not depend on precision because each partial image rewrites the same Pblock frame set.
+- **Dynamic power rises with precision:** int16 > int8 > int4 > empty. Static power (0.103 to 0.106 W) is most of the total and barely changes.
+- **int4 and empty share the same worst path.** The timing reports place it inside the VIO debug core in the static region, with no logic between the two registers. In those two builds the swappable region is not the slowest part.
+- **All four designs met timing and were tested at 100 MHz.** The Fmax column is an estimate, 1000 / (10 − WNS), not a tested clock speed.
 
-The greybox's 179 LUTs are a small but useful observation: they suggest that most of the module area in the arithmetic variants belongs to the multiplier/accumulator logic rather than the frozen interface. A dedicated report isolating every wrapper contribution would confirm that interpretation.
+**How to read the columns.** *Worst-path delay* is the signal travel time on the slowest path. *Estimated Fmax* uses the slack, which also counts clock skew and setup time, so it is not simply 1000 ÷ delay. *Power* is a **Vivado vectorless estimate on the routed design, confidence Medium; not measured on the board**. "Vectorless" means Vivado assumes default switching rates instead of using recorded signal activity.
 
-The continuity check is weak when programs finish in less than a second because a one-second uptime sample can miss a short interruption. The monotonic uptime sequence from 2 to 29 seconds across the self-test is stronger evidence: the static counter continued across the partial swaps, while the full-program row reset it.
+| Configuration | Slowest path | Logic levels | Where |
+|---|---|---:|---|
+| int16 | VIO select probe → overflow register in the module's readout | 6 | crosses into the swappable region |
+| int8 | module input register → accumulator of the PE in row 0, column 2 | 11 | inside the swappable region: an int8 multiply-accumulate |
+| int4, empty | one VIO-core register → another | 0 | static region (VIO debug core) |
 
-| Prediction | Measured outcome |
-|---|---|
-| P1: every partial 585,560 B | 585,559 B |
-| P2: every full 4,045,667 B | 4,045,666 B |
-| P3: swap about 1.42 s | 429.3 ms mean for the 12 recorded partials |
-| P4: DSP 16/0/0/0 | measured 16/0/0/0 |
-| P5: int8 LUT larger than int4 | measured 1,451 versus 693 |
-| P6: equal compute latency | CT_CYCLES 12 and start-to-done 15 for every module |
-| P7: static resources above T1 | T2 VIO/status interface is larger |
-| P8: timing meets 100 MHz | WNS is positive in all four builds |
-| P9: board matches `c_out.hex` | demo has 144 rows and 0 mismatches; the recorded board sweep has stated limits |
+A *logic level* is one logic cell a signal passes through between two registers.
 
-*Sources: docs/t2/T2_PLAN.md, docs/t2/reports/build_summary.csv, docs/t2/reports/hw_selftest_20261022_134926.csv, docs/t2/reports/cfg_int16_timing_summary.rpt, docs/t2/reports/cfg_int8_timing_summary.rpt, docs/t2/reports/cfg_int4_timing_summary.rpt, docs/t2/reports/cfg_grey_timing_summary.rpt*
+### 20.2 The DSP-versus-LUT trade
+
+- **int16 is the cheapest in LUTs** (253) because its 16 multipliers are DSP slices: one per PE, one multiply-accumulate each.
+- **int8 and int4 use no DSP slices on purpose** (decision D3), so the comparison shows what a multiplier costs in LUTs.
+- **int4 is about 2.1 times smaller than int8, not 4 times.** The multipliers shrink, but the adders, accumulators, registers and readout shrink less.
+- **The empty module's 179 LUTs are the interface.** The greybox utilisation report lists exactly 179 one-input LUTs: one per non-clock boundary wire.
+
+### 20.3 Swap time
+
+The 12 partial swaps average 429.3 ms at a 15 MHz JTAG clock. That is 585,559 bytes in 0.4293 s, about 10.9 Mbit/s (1.36 MB/s); the full programs reach about 12.9 Mbit/s. A two-point fit gives 0.599 µs per byte plus 0.079 s fixed overhead. T1's fit was 2.21 µs per byte plus 0.13 s, at a JTAG clock that was not recorded. Swap time does not depend on precision, because every partial bitstream rewrites the same fenced area and has the same size.
+
+**Continuity.** With programs under one second, the uptime check reduces to "the counter did not go backwards". The stronger evidence is the full sequence: uptime ran from 2 to 29 s across 12 swaps without a reset, and reset only on the full programs.
+
+### 20.4 Predictions versus measurements
+
+| # | Prediction (written before the build) | Measured | Held? |
+|---|---|---|---|
+| P1 | Every partial 585,560 B | 585,559 B | within 1 byte: the bitstream header names the top module, and `top_t2` is one character shorter than T1's `top_dfx` |
+| P2 | Every full 4,045,667 B | 4,045,666 B | within 1 byte, same reason |
+| P3 | Swap about 1.42 s | 429.3 ms mean | not held: faster JTAG clock this session |
+| P4 | DSP 16 / 0 / 0 / 0 | 16 / 0 / 0 / 0 | held |
+| P5 | int8 LUTs > int4 LUTs | 1,451 > 693 | held |
+| P6 | Same latency for every module | 12 and 15 cycles in all 27 pairs | held (simulation) |
+| P7 | Static LUT/FF above T1's 636 / 1,412 | 1,300 / 2,659 | held |
+| P8 | WNS ≥ 0 in all four; worst path in the controller or an int8 multiply-accumulate | WNS +1.481 to +2.981 ns; the int8 worst path is a multiply-accumulate | held |
+| P9 | Board results bit-exact with the golden files | int16 9/9, int8 9/9, int4 5 case types; 144/144 demo values | held, with the int4 gap in section 22 |
+
+*Sources: docs/t2/reports/power_delay_summary.csv, docs/t2/reports/build_summary.csv, docs/t2/reports/cfg_*_timing_summary.rpt, docs/t2/reports/cfg_*_power.rpt, docs/t2/reports/cfg_grey_utilization_U_RP.rpt, docs/t2/reports/hw_selftest_20261022_134926.csv, bitstreams/t2/manifest.csv, docs/t2/T2_PLAN.md (section 12)*
 
 ## 21. Bugs, deviations and lessons
 
-The as-built record is a compact history of decisions that became rules:
+### 21.1 As-built deviations from the plan
 
-| Event | Symptom | Cause or fix | Lesson |
-|---|---|---|---|
-| A1-1 | full T0 array would not lint in old Icarus | XSim ran the complete benches; Icarus remained compile-only where possible | pin the simulator version and scope |
-| A1-2 | controller had an extra `running` output | it was wired to unused `ct_running` | inspect reused RTL ports before freezing the interface |
-| A1-3 | quantisation helper choice was uncertain | `saturate` and `clip_to_width` matched the full-range clamp sweep | test helper equivalence rather than guessing |
-| A1-4 | hex width differed for 10/18-bit values | `golden_t2.to_hex` uses ceiling nibble width | keep exact-width and probe-width formats separate |
-| A1-5 | probe names could differ after synthesis | the script accepts the locked static names and known aliases | preserve RTL net names |
-| A1-6 | constant outputs were optimized | internal `dont_touch` registers drive output wires | keep partition pins flop-driven |
-| A1-7 | two-dimensional net arrays failed old Icarus | the LUT array uses flat buses | use a lint-compatible representation |
-| A1-8 | Git Bash Vivado launch failed | PowerShell found Vivado's Tcl helpers | launch Vivado batch from PowerShell or cmd |
-| A1-9 | shared RM files moved unexpectedly | the fileset script assigns them after `-define_from` | assert fileset membership |
-| A1-10 | a stray argument could redirect a build | project path is accepted only as an absolute path | validate command-line paths |
-| A1-11 | cleanup risked read-only generated folders | the T1 cache was retained | obey repository boundaries |
-| A1-12 | T1 command syntax was easy to misremember | the T1 journal supplied the DFX forms | read the known-good journal |
+| # | What changed | Why |
+|---|---|---|
+| 1 | All benches ran in XSim; Icarus kept only as a compile check | The installed Icarus 0.9.7 rejects T0's two-dimensional net arrays |
+| 2 | The reused controller has an extra `running` output, wired to an unused net | Found by reading `controller.v` before freezing the interface |
+| 3 | Existing quantisation helpers reused; hex width rounded up for 10- and 18-bit values | The helpers matched the full-range clamp on every int16 input |
+| 4 | Lowercase hex in every vector file | The plan did not specify it; matches T0 |
+| 5 | Board script accepts both the locked VIO net names and known aliases | Synthesis can rename nets |
+| 6 | Constant outputs driven by internal `dont_touch` registers | Keeps every boundary wire flop-driven |
+| 7 | The LUT array uses flat buses instead of two-dimensional arrays | Lets the int8/int4 builds pass the Icarus compile check |
+| 8 | Vivado batch jobs launched from PowerShell | From Git Bash, synthesis failed with `couldn't read file` |
+| 9 | The project script moves the shared module file into place | Vivado's `-define_from` moved only some files |
+| 10 | The project path is accepted only as an absolute path | A stray argument can never redirect the real project |
+| 11 | A cache folder under `scripts/t1/` was kept | T1 files are read-only |
+| 12 | DFX command forms copied from T1's Vivado journal | Known-good syntax instead of memory |
 
-The later gotchas are operational rules. G16 fixes the accumulator widths at 18 and 10 bits. G17 requires `random_full` and `extremes_*`, because small vectors can make every precision look identical. G18 fixes the 256-bit probe ordering: the first hex digit is bit 255 and represents the top nibble of A[3][3]; the last four digits are A[0][0]. G19 forbids sending `08` or `04` through Tcl `expr`; format hexadecimal strings directly and sign-convert 32-bit results explicitly.
+### 21.2 Gotchas new in T2
 
-G20 keeps int8/int4 constant outputs and sign-extension bits on `dont_touch` flops. G21 keeps one authoritative RM file list. G22 freezes RTL, constraints, and filesets during a build. G23 separates GUI builds from scratch batch work. G24 refuses a bitstream outside the T2 manifest. G25 reruns a case after decoupling so stale `done_flag` data is not read.
+| # | Gotcha | Rule |
+|---|---|---|
+| G16 | Accumulator width | 18 and 10 bits, not 17 and 9 |
+| G17 | Precision-blind vectors | Tests must include `random_full` and `extremes_*` |
+| G18 | 256-bit probe order | First hex digit = top 4 bits of A[3][3]; last four digits = A[0][0] |
+| G19 | Tcl and hex | `08` through `expr` is an invalid octal number; build hex with `format` |
+| G20 | Constant outputs | Drive them from `dont_touch` flops |
+| G21 | Module file lists | One list, in `t2_filesets.tcl` |
+| G22 | Edits during a build | Sources are frozen between the `t2-rtl` and `t2-built` tags |
+| G23 | Two Vivado sessions | Batch jobs only in the scratch folder while the GUI builds |
+| G24 | Wrong-tier bitstreams | The board script refuses any file not in the T2 manifest |
+| G25 | Stale results after a swap | Decouple clears the done flag; always re-run before reading |
+| G26 | Old Icarus | Benches run in XSim |
+| G27 | Probe names | Keep the `vio_*` net names exactly; the probes file uses them |
+| G28 | Git Bash | Launch Vivado batch jobs from PowerShell or cmd |
+| G29 | Black-box warning | Opening the static synthesis checkpoint alone warns about the VIO; expected |
 
-G26 scopes XSim to the named bench and records the old Icarus limitation. G27 preserves probe net names. G28 records the Git Bash Vivado failure. G29 explains why opening the synthesized checkpoint alone can show a VIO black-box warning while the RP check remains meaningful.
+### 21.3 Lessons
 
-The board-script mock caught a hex string passed through Tcl `expr`: `00007E45` became a floating-point number. It also caught a bracket error in a format string before hardware was touched. XSim replaced Icarus 0.9.7 for the two-dimensional T0 array. Vivado batch jobs fail from Git Bash but work from PowerShell. The T1 log was lost to copy-paste, so T2 was logged with `vivado -log`. A visual Markdown editor rewrote tables and code blocks on save; these documents are therefore edited as plain text.
+- The board-script mock caught two real bugs before the hardware was touched: a hex string passed through Tcl's `expr` (`00007E45` became a floating-point number) and a bracket error in a format string.
+- T1's console log was lost to copy-paste, so T2's session was logged to a file from the start.
+- A visual Markdown editor silently rewrote tables and code blocks on save; documents are edited as plain text.
 
-*Sources: docs/t2/T2_PLAN.md, docs/t2/reports/scratch_validation.log, scripts/t2/hw_t2_mock.tcl, scripts/t2/hw_t2.tcl*
+*Sources: docs/t2/T2_PLAN.md (sections 13 and 16), docs/t2/T2_BOARD_RUNBOOK.md, scripts/t2/hw_t2_mock.tcl*
 
 ## 22. Limits, next steps and how to reproduce
 
 ### 22.1 Limits
 
-The board evidence does not include a complete nine-case int4 sweep. The four missing board cases are the int4 `random_full` and `extremes_*` cases identified by the plan. The demo has 144 rows and 0 mismatches, but that is not the same as exhaustive int4 coverage. LED observations are not recorded in the hardware log; use `docs/DEMO.md` for the filmed LED behavior. No T2 power figure, workload accuracy figure, or multi-board result was recorded in the repo. The timing evidence is for the 100 MHz target. The timing dataset contains 12 timed partial swaps at one JTAG clock.
+- **int4 never got the 9-case sweep on the board.** It passed 5 case types in the self-test (3 rounds) and 3 in the demo. Not run on int4: `identity`, `ones`, `zeros`, `random_inrange` (all pass in simulation).
+- **LED behaviour is not in the log.** It comes from the RTL and the plan; `docs/DEMO.md` asks for photos at the next session.
+- **Power is a Vivado vectorless estimate on the routed design, confidence Medium; not measured on the board.**
+- **No neural-network workload** and no accuracy measurement.
+- **One board, one JTAG clock, 12 timed swaps.** Fmax figures are estimates; only 100 MHz was tested.
 
-T3 ideas are not started: host-side quantisation, error versus int16, workload experiments, and power measurement. They are next steps, not completed results.
+### 22.2 Next steps (T3, not started)
 
-### 22.2 Reproduce T2 from a clean clone
+Host-side quantisation of real data, error against int16, a small real workload, on-board power measurement, and closing the int4 gap.
 
-1. Install the documented Python dependencies and run the golden-model checks.
-2. Generate the T2 vectors and run the simulator benches. The expected result is the recorded all-pass simulation summary.
-3. Run the out-of-context synthesis check and confirm the OOC summary.
-4. Run `create_project_t2.tcl` to create the Vivado project and DFX configurations.
-5. Open the project in Vivado, inspect the Pblock, synthesize the parent and child configurations, and run implementation at 100 MHz.
-6. Run the reports script, then `collect_bitstreams.py` with the staleness guard.
-7. Run the mock board script and confirm its positive checks and deliberate-fault checks.
-8. Run `verify_bundle.py` and confirm `BUNDLE OK`.
-9. On the board, connect at 15,000,000 Hz, load full int16 with `t2_full_int16.ltx`, resolve probes, run checks, perform the permitted swaps, and save the session CSV.
+### 22.3 Reproduce T2 from a clean clone
 
-Vivado GUI steps are deliberately kept in the reproduction sequence because the human operator performs the board and GUI actions. No batch command substitutes for the physical board evidence.
+1. Run `python python/test_golden_t2.py` (expect ALL PASS) and generate the vectors with `gen_vectors_t2.py`.
+2. Run `python scripts/t2/run_sims.py` (expect ALL PASS and NEGATIVE OK).
+3. From `vivado/scratch_t2/`, run `ooc_check.tcl` in Vivado batch mode from PowerShell.
+4. In the Vivado GUI, source `create_project_t2.tcl`, check the Pblock and DRC, then run synthesis and implementation.
+5. Run `reports_t2.tcl` and `power_delay_t2.tcl` in batch mode, then `collect_bitstreams.py`.
+6. Run `hw_t2_mock.tcl` (expect MOCK TESTS PASS and NEGATIVE MOCKS OK) and `verify_bundle.py` (expect BUNDLE OK).
+7. On the board: `t2_connect`, `t2_program full int16`, then any `t2_*` command from section 19.1.
 
-### 22.3 T2 file map
+### 22.4 T2 file map
 
 | Area | Files |
 |---|---|
-| RTL | `rtl/t2/top_t2.v`, `rtl/t2/rm/*.v`, static controller and decoupler sources |
+| RTL | `rtl/t2/top_t2.v`, `rtl/t2/rm/*.v`; reused `rtl/controller.v`, `rtl/pe.v`, `rtl/array.v`, `rtl/t1/rst_sync.v`, `rtl/t1/uptime.v`, `rtl/t1/dfx_decouple.v` |
 | Constraints | `constraints/top_t2.xdc`, `constraints/top_t2_pblock.xdc` |
 | Simulation | `tb/t2/*`, `sim/t2_vectors/*` |
 | Python | `python/golden_t2.py`, `python/gen_vectors_t2.py`, `python/test_golden_t2.py` |
-| Build scripts | `scripts/t2/create_project_t2.tcl`, `t2_filesets.tcl`, `ooc_check.tcl`, `reports_t2.tcl` |
-| Board scripts | `scripts/t2/hw_t2.tcl`, `hw_t2_mock.tcl`, `verify_bundle.py` |
+| Build scripts | `scripts/t2/create_project_t2.tcl`, `t2_filesets.tcl`, `ooc_check.tcl`, `reports_t2.tcl`, `power_delay_t2.tcl` |
+| Board scripts | `scripts/t2/hw_t2.tcl`, `hw_t2_mock.tcl`, `verify_bundle.py`, `collect_bitstreams.py` |
 | Evidence | `docs/t2/reports/*`, `bitstreams/t2/manifest.csv` |
 | Images | `docs/t2/img/rtl_schematic.png`, `Child_runs_impl.png`, `impl.png` |
-| Documents | `docs/t2/T2_PLAN.md`, `T2_BOARD_RUNBOOK.md`, `docs/DEMO.md`, `docs/PROJECT_DETAIL.md` |
+| Documents | `docs/t2/T2_PLAN.md`, `docs/t2/T2_BOARD_RUNBOOK.md`, `docs/DEMO.md`, `docs/PROJECT_DETAIL.md` |
 
-*Sources: docs/t2/T2_PLAN.md, docs/t2/T2_BOARD_RUNBOOK.md, docs/DEMO.md, docs/PROJECT_DETAIL.md, scripts/t2/create_project_t2.tcl, scripts/t2/hw_t2.tcl, scripts/t2/verify_bundle.py*
+*Sources: docs/t2/T2_PLAN.md, docs/t2/T2_BOARD_RUNBOOK.md, scripts/t2/*

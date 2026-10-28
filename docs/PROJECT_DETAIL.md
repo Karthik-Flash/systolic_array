@@ -302,8 +302,23 @@ One correction to the early estimate: the int8 accumulator needs **18 bits, not 
 - The identical hold slack in all four builds is expected for the same reason.
 - int4 is about 2.1 times smaller than int8 in LUTs, not 4 times, because adders, accumulators and control do not shrink with the number size.
 - int16 is the cheapest in LUTs because its multipliers are the 16 DSP slices.
-- The empty module still reports 179 LUTs, the same as the number of non-clock boundary wires, which looks like a per-wire interface cost (an inference to confirm in the reports).
-- Bitstreams: partial 585,559 bytes, full 4,045,666 bytes (predicted 585,560 and 4,045,667; the header string probably accounts for the one-byte difference).
+- The empty module still reports 179 LUTs. Its utilisation report lists them as 179 one-input LUTs, one per non-clock boundary wire: the cost of the interface itself.
+- Bitstreams: partial 585,559 bytes, full 4,045,666 bytes (predicted 585,560 and 4,045,667 from T1). The file header stores the top module's name, and `top_t2` is one character shorter than T1's `top_dfx`.
+
+**Resources, delay and power (report-ready).**
+
+| Configuration | LUTs, whole design | LUTs, swappable region | DSPs | Worst-path delay (ns) | Estimated Fmax (MHz) | Total power (W) | Dynamic power (W) |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| int16 | 1,553 | 253 | 16 | 7.732 | 127.1 | 0.135 | 0.032 |
+| int8 | 2,751 | 1,451 | 0 | 8.538 | 117.4 | 0.127 | 0.021 |
+| int4 | 1,993 | 693 | 0 | 6.532 | 142.5 | 0.124 | 0.017 |
+| Empty (greybox) | 1,479 | 179 | 0 | 6.532 | 142.5 | 0.116 | 0.013 |
+
+- **Dynamic power rises with precision:** int16 > int8 > int4 > empty. Static power (0.103 to 0.106 W) is most of the total.
+- **int4 and empty share the same worst path.** The timing reports place it inside the VIO debug core in the static region, so in those builds the swappable region is not the slowest part.
+- **All designs met timing and were tested at 100 MHz.** Fmax = 1000 / (10 − WNS) is an estimate, not a tested clock speed.
+
+Power is a Vivado vectorless estimate on the routed design, confidence Medium; not measured on the board. "Vectorless" means Vivado assumes default switching rates instead of recorded activity. Worst-path delay is the travel time on the slowest path; the Fmax estimate uses the slack, which also counts clock skew and setup time.
 
 ### 6.7 On the board (2026-10-22)
 
@@ -322,7 +337,7 @@ The board was driven by a Tcl script (`hw_t2.tcl`) in Vivado's Hardware Manager 
 
 ### 6.7.1 Analysis
 
-- **Swap time did not match the prediction.** We predicted about 1.42 s (from T1) and measured 0.43 s. The cause is the JTAG clock: 15 MHz this time, and T1's clock was never recorded (its effective rate was 3.25 Mbit/s against about 11 Mbit/s now). The new two-point fit is 0.599 µs per byte plus 0.079 s.
+- **Swap time did not match the prediction.** We predicted about 1.42 s (from T1) and measured 0.43 s. The cause is the JTAG clock: 15 MHz this time, and T1's clock was never recorded (its effective rate was about 3.3 Mbit/s against about 11 Mbit/s now). The new two-point fit is 0.599 µs per byte plus 0.079 s.
 - **Swap time does not depend on precision.** All partial files have the same size; the per-module means differ only within run-to-run scatter.
 - **Perspective.** In 0.43 s the multiplier could have performed about 2.9 million 4×4 products (0.43 s ÷ 150 ns), so a swap pays off when a precision mode lasts many calculations.
 
@@ -364,6 +379,7 @@ The board was driven by a Tcl script (`hw_t2.tcl`) in Vivado's Hardware Manager 
 | Partial bitstream | n/a | 585,560 B | 585,559 B |
 | Swap time | n/a | 1,424 ± 27 ms (JTAG clock not recorded) | 429.3 ms mean (JTAG at 15 MHz) |
 | On silicon | result 110 read back | 15 of 15 swaps | 14 of 14 self-test steps, 144 of 144 demo values |
+| Power (Vivado estimate, not measured) | 0.117 W total, 0.011 W dynamic (serial system) | not estimated | 0.116 to 0.135 W total, 0.013 to 0.032 W dynamic |
 
 **Predictions versus measurements (T2):** results bit-exact (held); partial and full sizes within one byte (held); swap time 1.42 s predicted versus 0.43 s measured (not held, explained by the JTAG clock); partition pins 179 plus clock (held); cycle count identical across modules (held, in simulation).
 
@@ -373,14 +389,14 @@ The board was driven by a Tcl script (`hw_t2.tcl`) in Vivado's Hardware Manager 
 
 **Not shown**
 - Neural-network accuracy: no MNIST or other workload was run.
-- Power or energy on the board: only T0's Vivado estimate exists, and none for T2.
+- Power measured on the board. T0 and T2 have Vivado estimates only; for T2 it is a Vivado vectorless estimate on the routed design, confidence Medium; not measured on the board. Energy per calculation was not computed.
 - A full 9-case test of int4 on the board. int4 passed 5 case types in the self-test and 3 in the demo; the other four (identity, ones, zeros, random_inrange) passed in simulation only.
 - LED behaviour in the logs (it is covered in `DEMO.md` and to be confirmed visually).
 - Anything beyond one board, one JTAG speed and 12 timed swaps.
 
 **T3 (not started)**
 - Convert real-valued data to 16/8/4-bit integers on the host (symmetric quantisation), run it through each precision and **measure the error against int16**.
-- Try a small real workload and measure power.
+- Try a small real workload and measure power on the board.
 - Close the int4 on-board gap.
 - Explore larger arrays or more modules in the same region, and faster reconfiguration paths than JTAG.
 
@@ -451,6 +467,7 @@ This is a demonstrator: it proves the mechanism and the resource trade-off, not 
 | T2 board runbook and session record | `docs/t2/T2_BOARD_RUNBOOK.md` |
 | Demo script and LED legend | `docs/DEMO.md` |
 | T2 build results | `docs/t2/reports/build_summary.csv`, `pr_verify.rpt`, `sim_cycles.csv`, `ooc_summary.csv` |
+| T2 power and delay estimates | `docs/t2/reports/power_delay_summary.csv`, `cfg_*_power.rpt` |
 | T2 board data | `docs/t2/reports/hw_session_20261022.log`, `hw_selftest_20261022_134926.csv`, `hw_demo_20261022_134038.csv` |
 | Collected bitstreams and checksums | `bitstreams/t2/` (with `manifest.csv`) |
 | Screenshots | `docs/t0/img`, `docs/t1/img`, `docs/t2/img` |

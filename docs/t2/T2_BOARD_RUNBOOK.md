@@ -142,15 +142,16 @@ The int8 mean includes one 518 ms outlier (step 11). Per-precision differences a
 
 | Item | Predicted | Measured | Verdict |
 |---|---|---|---|
-| P1 partial size | 585,560 B | 585,559 B | within 1 B (header string is probably 1 char shorter: `top_t2` vs `top_dfx`; unconfirmed) |
+| P1 partial size | 585,560 B | 585,559 B | within 1 B (the header's design string is 1 character shorter: `top_t2` vs T1's `top_dfx`, read from both files) |
 | P2 full size | 4,045,667 B | 4,045,666 B | within 1 B, same reason |
-| P3 swap time | ≈ 1.42 s | 0.429 s mean | **not held**: this session's JTAG clock was 15 MHz, T1's was not recorded (effective 3.25 Mbit/s then) |
+| P3 swap time | ≈ 1.42 s | 0.429 s mean | **not held**: this session's JTAG clock was 15 MHz, T1's was not recorded (effective about 3.3 Mbit/s then: 585,560 B in 1.424 s) |
 | P9 bit-exact on silicon | all RMs | int16 9/9, int8 9/9, int4 5 case types × 3 rounds + 3 in the demo; 144/144 demo elements | held |
 
 Limits to state honestly:
 - int4 never got the 9-case sweep on the board. Not run on int4: `identity`, `ones`, `zeros`, `random_inrange` (all pass in simulation).
 - Rows 10–11 were skipped for the same reason; the self-test still checked int4 `rm_id`, continuity and 5 case types in steps 4, 8, 12.
 - LED observations are not in the log.
+- Power was not measured on the board. The power figures in `docs/t2/reports/power_delay_summary.csv` are a Vivado vectorless estimate on the routed design, confidence Medium.
 - Continuity check: with programs under 1 s the rule `after − before ≥ floor(ms/1000)` reduces to "uptime did not go backwards"; the evidence of continuity is the monotonic 2 → 29 s sequence.
 
 ### F.5 Next session

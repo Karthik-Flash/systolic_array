@@ -1,5 +1,7 @@
 # T2 Plan — Precision Variants Behind One Frozen Interface
 
+Note (as built): T2_RESULTS.md was never created; results are in docs/t2/T2_Complete_Guide.md and docs/t2/reports/.
+
 **Project:** Precision-scalable systolic matrix multiplier with runtime precision swapping via DFX (CS G553, BITS Hyderabad)
 **Tier:** T2 — the reconfigurable partition becomes the real 4×4 array in **int16 / int8 / int4**
 **Board / tools:** ZedBoard `xc7z020clg484-1` · Vivado 2022.2 (project mode) · Icarus Verilog · Python 3 (`.venv`) · Windows · repo `D:/Projects/RC_Project`

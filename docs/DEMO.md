@@ -140,7 +140,9 @@ Steps 1-5, then 7 (int4), then 9 (the 200 example), then 11 (grey) or 14 (contra
 | What stops a bad value during a swap? | The decoupler forces the boundary wires to zero, the module is held in reset, and the start gate refuses runs. |
 | Why 0.43 s? | The partial file is 585,559 bytes and the JTAG cable ran at 15 MHz. The time depends on the region's size, not on what is inside. |
 | Is int4 "wrong"? | No. It is a coarser number format. The hardware matches the reference for int4. The *answer* differs because the inputs were clamped. |
-| Does this speed up a neural network? | Not claimed. We show correct swapping and the resource trade-off. Accuracy and power are future work. |
+| Does this speed up a neural network? | Not claimed. We show correct swapping and the resource trade-off. Accuracy and measured power are future work. |
+| How much power does it use? | Vivado estimates 0.135 W (int16), 0.127 W (int8), 0.124 W (int4), 0.116 W (empty). That is a Vivado vectorless estimate on the routed design, confidence Medium; not measured on the board. |
+| Why 16 DSP slices for int16? | 16 PEs, one multiply-accumulate each, one DSP slice each. int8 and int4 use LUTs on purpose, to show the DSP-versus-LUT trade. |
 | What would make swaps faster? | A faster path than JTAG (for example the processor's configuration port). Not used or measured here. |
 
 ---
