@@ -106,4 +106,4 @@ On the board: `source D:/Projects/RC_Project/scripts/t2/hw_t2.tcl`, then `t2_con
 - [Project detail: the whole project, from scratch](docs/PROJECT_DETAIL.md)
 - [Demo guide and LED legend](docs/DEMO.md)
 - [Handoff for the report and slides](docs/handoff/) ([HANDOFF.md](docs/handoff/HANDOFF.md), [BRIEFING_PACK.md](docs/handoff/BRIEFING_PACK.md))
-- [Submission source package index](submission/note.txt) (Verilog, IP, constraints, bitstreams, vectors in `submission/`)
+- [Submission source package index](submission/README.txt) (`submission/T2_final/` is the final project; T0 and T1 are under `submission/earlier_tiers/`)
