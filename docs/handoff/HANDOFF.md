@@ -11,7 +11,7 @@ This file briefs a new chat that will finish the course deliverables for the FPG
 | 1 | Tabulate and explain the final demo results (lab on 2026-10-29) | the files the student uploads after the lab (section 3) |
 | 2 | Text of the 2-page PDF report | section 2 rules, the results table in the briefing pack |
 | 3 | The PPT, with speaker notes | the outline in section 7, the figures listed in the briefing pack |
-| 4 | A short README or statement for the submission upload, only if the course wants one | `submission/note.txt` (the source package is already built) |
+| 4 | A short README or statement for the submission upload, only if the course wants one | `submission/README.txt` (the source package is already built: `submission/T2_final/` is the final project, `submission/earlier_tiers/` holds T0 and T1) |
 | 5 | Q&A practice | the seed table in section 8 |
 
 ---
@@ -28,7 +28,7 @@ This file briefs a new chat that will finish the course deliverables for the FPG
 | LUT, delay, power in a table | All three exist for every configuration; type them by hand from the briefing pack |
 | No code, waveforms or Vivado images in the report | Redraw the block diagram; screenshots may appear in the PPT only |
 | Plagiarism check | Fresh wording; do not paste sentences from the project guides |
-| Source folder | Already built in `submission/`; there are no .coe files (no memory initialisation is used) |
+| Source folder | Already built: `submission/T2_final/` (self-contained: Verilog, xdc, VIO IP, bit files, vectors, scripts) plus `submission/earlier_tiers/` (T0, T1); there are no .coe files (no memory initialisation is used) |
 | Demo 23 to 27 November | The deck needs a live-demo slide and a recorded backup clip |
 
 ---
@@ -140,7 +140,7 @@ Everything else (T0, T1, demo per case, self-test rows, manifest, glossary) is i
 
 **Must have:** this file; `BRIEFING_PACK.md`; `docs/PROJECT_DETAIL.md`; the course material (assignment text, rubric, any template); the images wanted in the deck (see the figure inventory in the briefing pack); after the lab, the files in section 3.
 
-**Optional:** `docs/DEMO.md` (the demo script and LED legend); `docs/t2/T2_Complete_Guide.md` (the long technical version); `submission/note.txt`.
+**Optional:** `docs/DEMO.md` (the demo script and LED legend); `docs/t2/T2_Complete_Guide.md` (the long technical version); `submission/README.txt` (index of the source package).
 
 ---
 

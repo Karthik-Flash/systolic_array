@@ -57,6 +57,8 @@ docs/t0/        T0 guide (+ img/)
 docs/t1/        T1 guide, results, original plan, board runbook, reports/, img/
 docs/t2/        T2 guide, plan, board runbook, reports/, img/
 docs/           PROJECT_DETAIL.md (whole project), DEMO.md (live demo script)
+docs/handoff/   HANDOFF.md, BRIEFING_PACK.md (for the report and slides)
+submission/     course source package: T2_final/ (self-contained final project), earlier_tiers/ (T0, T1), README.txt
 vivado/         Vivado projects (gitignored; regenerate from sources)
 ```
 

@@ -20,9 +20,10 @@ This pack is for a chat that cannot see the repository. It collects the facts, t
 6. T2: the board session
 7. Report-ready results table
 8. The demo script and LED legend (for the final lab)
-9. Figure inventory
-10. Document inventory
-11. Glossary
+9. The source package
+10. Figure inventory
+11. Document inventory
+12. Glossary
 
 ---
 
@@ -540,7 +541,25 @@ Why steps 8 and 9 give those values: every result is four products summed. 100 f
 
 ---
 
-## 9. Figure inventory
+## 9. The source package (`submission/`)
+
+The course asks for a separate folder with all Verilog, xdc, bit and .coe files as applicable. It is built and committed:
+
+| Folder | Contents |
+|---|---|
+| `submission/README.txt` | How to run, a table of every T2_final file (meaning and origin), notes on the earlier tiers |
+| `submission/T2_final/` | The final project, self-contained: `rtl/` (static top plus the reused T0 and T1 files), `rtl/rm/` (int16, int8, int4 modules and shared parts), `tb/`, `constraints/`, `ip/vio_t2.xci`, `bitstreams/` (4 full, 4 partial, `.ltx`, `manifest.csv`), `sim_vectors/` (162 `.hex` files the benches read), `scripts/`, `python/` |
+| `submission/earlier_tiers/T0_int16_array/` | T0 RTL, benches, constraints, VIO IP, the VIO-system bitstream and probes file, vectors, Python model |
+| `submission/earlier_tiers/T1_dfx_mechanism/` | T1 RTL, benches, constraints, VIO IP, 6 bitstreams with probes file and manifest, scripts |
+
+- No .coe files: the design has no memory initialisation; matrices are loaded at run time through the VIO.
+- T2_final is self-contained: the top-level bench passes for int16, int8 and int4 in XSim using only a copy of the folder.
+- Every bitstream matches its manifest (SHA-256). The T0 bitstream is a rebuild (2026-09-29) from sources unchanged since the `t0-onboard` tag, not proven byte-identical to the file loaded on 24 Sep.
+- Total 310 files, 35.73 MB.
+
+---
+
+## 10. Figure inventory
 
 Viewed one by one. Screenshots may go in the deck; the report must not contain Vivado images.
 
@@ -558,7 +577,7 @@ Still to be made: the block diagram for the report (redraw; no Vivado image), an
 
 ---
 
-## 10. Document inventory
+## 11. Document inventory
 
 | Document | One line |
 |---|---|
@@ -575,11 +594,11 @@ Still to be made: the block diagram for the report (redraw; no Vivado image), an
 | `docs/t2/reports/` | Build, power, timing, simulation and board evidence (CSV, reports, log) |
 | `docs/handoff/HANDOFF.md` | Task order, course rules, style, limits, Q&A seed, starter message |
 | `docs/handoff/BRIEFING_PACK.md` | This file |
-| `submission/note.txt` | Index of the source package: every file, its origin and meaning |
+| `submission/README.txt` | Index of the source package: how to run, every T2_final file with its meaning and origin, the earlier tiers |
 
 ---
 
-## 11. Glossary
+## 12. Glossary
 
 | Term | Meaning |
 |---|---|

@@ -130,6 +130,7 @@ scripts/       Tcl and Python automation for builds, reports, board control, moc
 bitstreams/    the collected, checked bitstreams that were loaded on the board
 sim/           test vectors (inputs and expected outputs)
 docs/          guides, plans, runbooks, reports, images
+submission/    the course source package: T2_final/ (self-contained final project), earlier_tiers/ (T0, T1)
 vivado/        Vivado projects (not committed; regenerated from scripts)
 ```
 
@@ -471,3 +472,5 @@ This is a demonstrator: it proves the mechanism and the resource trade-off, not 
 | T2 board data | `docs/t2/reports/hw_session_20261022.log`, `hw_selftest_20261022_134926.csv`, `hw_demo_20261022_134038.csv` |
 | Collected bitstreams and checksums | `bitstreams/t2/` (with `manifest.csv`) |
 | Screenshots | `docs/t0/img`, `docs/t1/img`, `docs/t2/img` |
+| Course source package | `submission/README.txt`, `submission/T2_final/`, `submission/earlier_tiers/` |
+| Handoff for the report and slides | `docs/handoff/HANDOFF.md`, `docs/handoff/BRIEFING_PACK.md` |
