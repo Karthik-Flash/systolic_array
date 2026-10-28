@@ -33,3 +33,4 @@ sim/t2_build/
 *.jou
 
 copilot-instructions.md
+!submission/**
