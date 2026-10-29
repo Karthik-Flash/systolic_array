@@ -24,13 +24,13 @@ vivado*.log
 *.str
 .Xil/
 
-NOTE.txt
-T0_Explained_From_Scratch.md
 # T2
 sim/t2_build/
 **/__pycache__/
 .pytest_cache/
 *.jou
 
-copilot-instructions.md
+# Shot list for the demo video (kept locally for reference)
+docs/t2/VIDEO_SHOT_LIST.md
+
 !submission/**
