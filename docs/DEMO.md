@@ -3,13 +3,13 @@
 How to run the live demo, what to say at each step, what you should see, and what it means.
 Takes about 10 minutes (5 minutes for the short version in section 5).
 
-**Status of the LED descriptions:** they come from the RTL design and the plan. The 2026-10-22 session log cannot show LEDs, so the first demo run is also the first time they are confirmed. Please note what you actually see (section 8).
+**LED descriptions:** observed on the board on 2026-10-29; every LED behaved as described below.
 
 ---
 
 ## 1. The 60-second pitch
 
-> "This is a 4×4 matrix multiplier on an FPGA, the core operation of neural networks. It can work with 16-bit, 8-bit or 4-bit numbers. Normally you would need three separate circuits. We keep **one fenced region** of the chip and swap what is inside it **while the rest of the chip keeps running**. A swap takes under half a second. Every answer is checked against a Python reference, and I will show you that smaller numbers change the answer in exactly the way the maths predicts."
+> "This is a 4×4 matrix multiplier on an FPGA, the core operation of neural networks. It can work with 16-bit, 8-bit or 4-bit numbers. Normally you would need three separate circuits. We keep **one fenced region** of the chip and swap what is inside it **while the rest of the chip keeps running**. A swap takes about 0.43 s at a 15 MHz JTAG clock; slower links take longer. Every answer is checked against a Python reference, and smaller numbers change the answer in exactly the way the maths predicts."
 
 ---
 
@@ -46,7 +46,7 @@ The number of LEDs that blink = the bits ÷ 4.
 | Same plus LD4 on | A calculation finished; the result is waiting |
 | LD5 and LD6 on, LD3..0 dark, LD7 still blinking | **Mid-swap.** Region is isolated and held in reset; the static region is alive |
 | LD3..0 dark but LD7 blinking, LD5/LD6 off | Greybox loaded (empty module): chip healthy, region does nothing |
-| Everything stops for about 2.5 s, then restarts | A **full** reprogramming: the static region itself was rewritten (this is the contrast to a swap) |
+| Everything stops for a few seconds (2.5 s at a 15 MHz JTAG clock), then restarts | A **full** reprogramming: the static region itself was rewritten (this is the contrast to a swap) |
 
 ---
 
@@ -72,8 +72,8 @@ Type each command in the Hardware Manager **Tcl Console**, one at a time. Add `-
 | # | Command | You should see | What it represents |
 |---|---|---|---|
 | 1 | `source D:/Projects/RC_Project/scripts/t2/hw_t2.tcl` | `hw_t2.tcl loaded (mock=0)` | Loads the board-control commands |
-| 2 | `t2_connect` | `connected (device xc7z020_1; JTAG clock 15000000 Hz)` | Talking to the chip over the same USB cable |
-| 3 | `t2_program full int16` | about 2.5 s; DONE LED on; **LD7 blinks; LD3..0 blink together** | Full programming: the fixed part plus the int16 module |
+| 2 | `t2_connect` | `connected (device xc7z020_1; JTAG clock N Hz)`. N depends on the cable: 15000000 on the ZedBoard's Digilent cable (2026-10-22), 6000000 or 12000000 on a Xilinx cable (2026-10-29) | Talking to the chip over the same USB cable |
+| 3 | `t2_program full int16` | about 2.5 s at 15 MHz (5.5 s at 12 MHz, 9 s at 6 MHz); DONE LED on; **LD7 blinks; LD3..0 blink together** | Full programming: the fixed part plus the int16 module |
 | 4 | `t2_status` | `rm_id 16 (int16)`, uptime counting up, `runs 0` | The module identifies itself; uptime proves the static counter runs |
 | 5 | `t2_set_precision int16 counting` | A 4×4 matrix with **110** at row 0, column 2, then `matches golden: yes` | A real calculation on silicon, checked against Python |
 
@@ -83,7 +83,7 @@ Type each command in the Hardware Manager **Tcl Console**, one at a time. Add `-
 
 | # | Command | You should see | What it represents |
 |---|---|---|---|
-| 6 | `t2_set_precision int8 counting` | `now int8 (swap about 430 ms)`. **LD5/LD6 light and LD3..0 go dark during the swap, then LD1 and LD0 blink.** **LD7 never stops.** Same matrix as step 5, `matches golden: yes` | The swappable region got a new module in under half a second |
+| 6 | `t2_set_precision int8 counting` | `now int8 (swap N ms)`: about 430 ms at 15 MHz, 900 ms at 12 MHz, 1,400 ms at 6 MHz. **LD5/LD6 light and LD3..0 go dark during the swap, then LD1 and LD0 blink.** **LD7 never stops.** Same matrix as step 5, `matches golden: yes` | The swappable region got a new module in under half a second |
 | 7 | `t2_set_precision int4 counting` | `now int4`. **Only LD0 blinks.** The matrix changes: **70** at row 0, column 2 (not 110). `matches golden: yes` | Smaller numbers give different answers, exactly as predicted |
 
 > Say: "int4 can only hold -8 to 7, so every value above 7 is clamped to 7. 1×7 + 2×7 + 3×7 + 4×7 = 70. Still 'matches golden: yes', because the reference model clamps the same way."
@@ -112,7 +112,7 @@ What it represents: every cell is A (all 100, then all 200) times B (all 1), sum
 | # | Command | You should see | What it represents |
 |---|---|---|---|
 | 10 | `t2_demo` | Three tables (counting, random_full, extremes_neg), each showing int16 / int8 / int4 side by side with `*` where a value differs from int16. For extremes_neg: 2147483647 (saturated), 65536, 256. Ends with `demo PASS` and a CSV path | 144 numbers, all matching their precision's reference. Saves `hw_demo_*.csv` |
-| 11 | `t2_swap_demo grey` | BEFORE / DECOUPLE (`rm_id ff`, result 0) / PROGRAM (about 420 ms) / RELEASE (`rm_id 00`) / AFTER; `VERDICT: PASS`. **LD3..0 dark, LD7 still blinking** | The empty module: chip healthy, region does nothing |
+| 11 | `t2_swap_demo grey` | BEFORE / DECOUPLE (`rm_id ff`, result 0) / PROGRAM (about 420 ms at 15 MHz) / RELEASE (`rm_id 00`) / AFTER; `VERDICT: PASS`. **LD3..0 dark, LD7 still blinking** | The empty module: chip healthy, region does nothing |
 | 12 | `t2_swap_demo int16` | Same layout, `rm_id 16`, `VERDICT: PASS`, badge blinks again | Back to the start |
 | 13 | `t2_block_test` | Two lines `refused (PASS)` (while decoupled; while in reset) and one `accepted ... PASS`; `block test PASS`. **LD5/LD6 light briefly** | The start gate: nobody can run a calculation while the region is mid-swap |
 
@@ -120,7 +120,7 @@ What it represents: every cell is A (all 100, then all 200) times B (all 1), sum
 
 | # | Command | You should see | What it represents |
 |---|---|---|---|
-| 14 | `t2_full_contrast` | About 2.5 s: **all LEDs including LD7 stop**, then restart. `uptime N -> 0` and `PASS` | A full program resets the static region too. A partial swap never did. That is the whole point of DFX |
+| 14 | `t2_full_contrast` | About 2.5 s at 15 MHz (9 s at 6 MHz): **all LEDs including LD7 stop**, then restart. `uptime N -> 0` and `PASS` | A full program resets the static region too. A partial swap never did. That is the whole point of DFX |
 
 Optional: `t2_selftest 1` runs an automatic check of two full programs and four swaps and writes a CSV (takes a few minutes).
 
@@ -138,7 +138,7 @@ Steps 1-5, then 7 (int4), then 9 (the 200 example), then 11 (grey) or 14 (contra
 |---|---|
 | Why not three separate circuits? | They would use three times the area. DFX reuses one region; we measured the region's cost per module (253, 1,451 or 693 lookup tables). |
 | What stops a bad value during a swap? | The decoupler forces the boundary wires to zero, the module is held in reset, and the start gate refuses runs. |
-| Why 0.43 s? | The partial file is 585,559 bytes and the JTAG cable ran at 15 MHz. The time depends on the region's size, not on what is inside. |
+| Why 0.43 s? | About 0.43 s at a 15 MHz JTAG clock; slower links take longer (900 ms at 12 MHz, 1.4 s at 6 MHz on another cable). The partial file is 585,559 bytes for every module, so the time depends on the region's size and the JTAG link, not on what is inside. |
 | Is int4 "wrong"? | No. It is a coarser number format. The hardware matches the reference for int4. The *answer* differs because the inputs were clamped. |
 | Does this speed up a neural network? | Not claimed. We show correct swapping and the resource trade-off. Accuracy and measured power are future work. |
 | How much power does it use? | Vivado estimates 0.135 W (int16), 0.127 W (int8), 0.124 W (int4), 0.116 W (empty). That is a Vivado vectorless estimate on the routed design, confidence Medium; not measured on the board. |
@@ -147,23 +147,22 @@ Steps 1-5, then 7 (int4), then 9 (the 200 example), then 11 (grey) or 14 (contra
 
 ---
 
-## 7. If something goes wrong
+## 7. Troubleshooting
 
 | Symptom | Do this |
 |---|---|
 | `t2_connect` cannot find the device | Re-seat the J17 cable, close other Vivado windows, Open Target again |
 | `no VIO core` | Run `t2_program full int16` |
 | `[Xicom 50-103]` | A partial was loaded onto a blank chip: `t2_program full int16` first |
-| A check says FAIL | Stop, copy the `got ... expected` lines, send them to me |
+| A check says FAIL | Stop. Keep the `got ... expected` lines and the output of `t2_status`, then run simpler cases on the same module (`zeros`, `ones`, `identity`, `counting`) to locate the fault |
 | `[Labtools 27-1952]` warnings | Expected after a full program, harmless |
 
 ---
 
-## 8. After the demo: what to bring back
+## 8. Recording results
 
-- The Tcl console text or `demo.log`.
-- For each LED row in section 2: **what you actually saw** (matches or differs, and the blink speed if it looked different).
-- Phone video of one swap with LD7 in frame, and a photo of each badge (int16, int8, int4, greybox).
-- Anything that surprised you, and any command that behaved differently from the "You should see" column.
-
-Save logs to `docs/t2/reports/` and tell me the file names.
+- Save the Tcl console text, or the log file, to `docs/t2/reports/` with the session date in the name.
+- `t2_demo` and `t2_selftest` write their CSV files to `docs/t2/reports/` automatically.
+- Note the JTAG clock printed by `t2_connect`; swap times depend on it.
+- Note what each LED in section 2 did, and any command whose output differed from the "You should see" column.
+- Keep videos and photos outside the repository.

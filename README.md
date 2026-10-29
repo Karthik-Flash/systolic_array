@@ -11,7 +11,7 @@ This project implements a 4×4 output-stationary systolic array for matrix multi
 | **T2** | Precision variants (int16 / int8 / int4 array) as reconfigurable modules in the T1 Pblock | ✅ complete on silicon | [T2 Complete Guide](docs/t2/T2_Complete_Guide.md) · [Project detail](docs/PROJECT_DETAIL.md) |
 | T3 | Runtime precision control and measurement (optionally MNIST) | later | — |
 
-Tags: `t0-datapath`, `t0-system`, `t0-onboard`, `t1-rtl`, `t1-built`, `t1-onboard`, `t2-rtl`, `t2-built`, `t2-onboard`.
+Tags: `t0-datapath`, `t0-system`, `t0-onboard`, `t1-rtl`, `t1-built`, `t1-onboard`, `t2-rtl`, `t2-built`, `t2-onboard`, `t2-final`.
 
 ## Headline numbers
 
@@ -36,8 +36,10 @@ Tags: `t0-datapath`, `t0-system`, `t0-onboard`, `t1-rtl`, `t1-built`, `t1-onboar
 | Swappable region, LUTs | int16 **253** (+ 16 DSP) · int8 **1,451** · int4 **693** · empty 179 (0 DSP in int8 / int4 / empty) |
 | Timing @ 100 MHz | WNS +2.135 / +1.481 / +2.981 / +2.981 ns (int16 / int8 / int4 / empty), WHS +0.088 ns, `pr_verify` PASS (180 partition pins) |
 | Partial swap over JTAG (15 MHz) | **429.3 ms** mean (N = 12, sd 29.1, 411–518 ms), vs full program 2,500.5 ms (N = 2) |
+| Swap time vs JTAG clock (second cable, 2026-10-29) | 6 MHz: 1,396.7 ms (N = 16); 12 MHz: 900 ms (N = 4); full program 5,522 ms at 12 MHz |
 | Partial bitstream | 585,559 B = **14.5%** of the full 4,045,666 B; the same for every module |
-| On silicon | **14/14** self-test steps, **144/144** demo values bit-exact, 23 programs (19 partial, 4 full) without a failure |
+| On silicon | **14/14** self-test steps, **144/144** demo values bit-exact, 23 programs (19 partial, 4 full) without a failure (2026-10-22) |
+| Second session (2026-10-29) | demo **144/144** again; LEDs observed as designed (LD7 heartbeat never stopped during swaps); filmed |
 | Power | 0.135 / 0.127 / 0.124 / 0.116 W total (int16 / int8 / int4 / empty): Vivado vectorless estimate, confidence Medium; not measured on the board |
 
 ## Repo map
@@ -57,7 +59,6 @@ docs/t0/        T0 guide (+ img/)
 docs/t1/        T1 guide, results, original plan, board runbook, reports/, img/
 docs/t2/        T2 guide, plan, board runbook, reports/, img/
 docs/           PROJECT_DETAIL.md (whole project), DEMO.md (live demo script)
-docs/handoff/   HANDOFF.md, BRIEFING_PACK.md (for the report and slides)
 submission/     course source package: T2_final/ (self-contained final project), earlier_tiers/ (T0, T1), README.txt
 vivado/         Vivado projects (gitignored; regenerate from sources)
 ```
@@ -107,5 +108,4 @@ On the board: `source D:/Projects/RC_Project/scripts/t2/hw_t2.tcl`, then `t2_con
 - [T2 board runbook and session record](docs/t2/T2_BOARD_RUNBOOK.md)
 - [Project detail: the whole project, from scratch](docs/PROJECT_DETAIL.md)
 - [Demo guide and LED legend](docs/DEMO.md)
-- [Handoff for the report and slides](docs/handoff/) ([HANDOFF.md](docs/handoff/HANDOFF.md), [BRIEFING_PACK.md](docs/handoff/BRIEFING_PACK.md))
 - [Submission source package index](submission/README.txt) (`submission/T2_final/` is the final project; T0 and T1 are under `submission/earlier_tiers/`)

@@ -115,9 +115,9 @@ The partial file's size depends on the *size of the fenced area*, not on what is
 
 **Tiers and tags.** Each tier has a plan, an implementation, a verification stage and a board session. Git tags mark the milestones: `t0-datapath`, `t0-system`, `t0-onboard`, `t1-rtl`, `t1-built`, `t1-onboard`, `t2-rtl`, `t2-built`, `t2-onboard`.
 
-**Timeline.** T0 on silicon first; T1 board sessions followed (the self-test data is dated 2026-10-08); T2's build, collection and reports were finished by 2026-10-16 (the report scripts ran that day), and it ran on the board on 2026-10-22.
+**Timeline.** T0 on silicon first; T1 board sessions followed (the self-test data is dated 2026-10-08); T2's build, collection and reports were finished by 2026-10-16 (the report scripts ran that day), and it ran on the board on 2026-10-22. A second board session on 2026-10-29 repeated the demo, filmed the LEDs and measured swap time at two more JTAG clocks.
 
-**Method.** Each tier followed the same loop: write a plan with decisions and predictions, implement from it, verify in simulation against a Python reference, build in Vivado, collect and check the bitstreams, rehearse the board scripts on a software mock, then run on the real board and compare with the predictions. The human orchestrator ran every Vivado GUI step and every board step, with AI coding assistants helping to plan, write and review code and scripts.
+**Method.** Each tier followed the same loop: write a plan with decisions and predictions, implement from it, verify in simulation against a Python reference, build in Vivado, collect and check the bitstreams, rehearse the board scripts on a software mock, then run on the real board and compare with the predictions. Every Vivado build step and every board step was run by hand, following written plans and runbooks.
 
 **Repository layout.**
 
@@ -342,6 +342,29 @@ The board was driven by a Tcl script (`hw_t2.tcl`) in Vivado's Hardware Manager 
 - **Swap time does not depend on precision.** All partial files have the same size; the per-module means differ only within run-to-run scatter.
 - **Perspective.** In 0.43 s the multiplier could have performed about 2.9 million 4×4 products (0.43 s ÷ 150 ns), so a swap pays off when a precision mode lasts many calculations.
 
+### 6.7.2 Second board session (2026-10-29)
+
+The same bitstreams were run again for the live demo and the video, on a different JTAG cable (a Xilinx cable; the 22 Oct session used the ZedBoard's Digilent cable). The session started at a 6 MHz JTAG clock and was later set to 12 MHz.
+
+| Check | Result |
+|---|---|
+| Live demo (`t2_demo`) | 144 of 144 values matched; C[0][2] = 110 / 110 / 70 (`counting`) and 2,147,483,647 / 65,536 / 256 (`extremes_neg`, overflow flag set on all 16 int16 values) |
+| Saturation example (A all 200, B all 1) | 800 / 508 / 28 for int16 / int8 / int4, at 6 MHz and again in the 12 MHz video take |
+| Swap with checks (`t2_swap_demo` grey and int16) | VERDICT PASS at both clocks |
+| Start gating (`t2_block_test`) | refused while decoupled and while held in reset; accepted after release; PASS |
+| Static region during swaps | uptime never reset by a partial swap; reset only by the full programs (430 → 0 s and 1,396 → 0 s) |
+| LEDs | observed as designed: LD7 kept blinking through every swap; badge int16 all four, int8 LD1 and LD0, int4 LD0 only, empty dark; LD5 and LD6 lit during swaps; LD4 on after runs and cleared by swaps and resets; a full program stopped every LED, LD7 included, then restarted |
+
+**Swap time against the JTAG clock**
+
+| JTAG clock | Session | Partial swaps N | Mean (ms) | Range (ms) | Full program |
+|---|---|---:|---:|---|---|
+| 6 MHz | 2026-10-29, Xilinx cable | 16 | 1,396.7 | 1,367–1,449 | 8,897 ms mean (N = 2) |
+| 12 MHz | 2026-10-29, Xilinx cable | 4 | 900 | 857–976 | 5,522 ms (N = 1) |
+| 15 MHz | 2026-10-22, Digilent cable | 12 | 429.3 | 411–518 | 2,500.5 ms mean (N = 2) |
+
+The partial file is 585,559 B in every case, so the difference comes from the JTAG link. On the same cable, doubling the clock from 6 to 12 MHz made swaps about 1.5× faster, not 2×, so part of each swap is fixed overhead. The 6 MHz time (about 1.40 s) is close to T1's 1,424 ms, which suggests T1 also ran on a slow link; T1's clock was not recorded. The 15 MHz row used a different cable, so it is not a pure clock comparison.
+
 ### 6.8 Lessons
 
 - The simulator choice mattered: the installed Icarus (version 0.9.7) rejected T0's two-dimensional net arrays, so all T2 benches ran in Vivado's XSim.
@@ -378,8 +401,8 @@ The board was driven by a Tcl script (`hw_t2.tcl`) in Vivado's Hardware Manager 
 | Timing at 100 MHz | met (+0.378 ns serial system, +1.427 ns VIO) | met (+3.501 to +4.304 ns) | met (+1.481 to +2.981 ns) |
 | Compute per 4×4 product | 110 ns | n/a | 150 ns start to done flag (15 ticks) |
 | Partial bitstream | n/a | 585,560 B | 585,559 B |
-| Swap time | n/a | 1,424 ± 27 ms (JTAG clock not recorded) | 429.3 ms mean (JTAG at 15 MHz) |
-| On silicon | result 110 read back | 15 of 15 swaps | 14 of 14 self-test steps, 144 of 144 demo values |
+| Swap time | n/a | 1,424 ± 27 ms (JTAG clock not recorded) | 429.3 ms mean at a 15 MHz JTAG clock; 900 ms at 12 MHz and 1,396.7 ms at 6 MHz on a second cable |
+| On silicon | result 110 read back | 15 of 15 swaps | 14 of 14 self-test steps, 144 of 144 demo values (both sessions), LEDs observed as designed |
 | Power (Vivado estimate, not measured) | 0.117 W total, 0.011 W dynamic (serial system) | not estimated | 0.116 to 0.135 W total, 0.013 to 0.032 W dynamic |
 
 **Predictions versus measurements (T2):** results bit-exact (held); partial and full sizes within one byte (held); swap time 1.42 s predicted versus 0.43 s measured (not held, explained by the JTAG clock); partition pins 179 plus clock (held); cycle count identical across modules (held, in simulation).
@@ -392,8 +415,8 @@ The board was driven by a Tcl script (`hw_t2.tcl`) in Vivado's Hardware Manager 
 - Neural-network accuracy: no MNIST or other workload was run.
 - Power measured on the board. T0 and T2 have Vivado estimates only; for T2 it is a Vivado vectorless estimate on the routed design, confidence Medium; not measured on the board. Energy per calculation was not computed.
 - A full 9-case test of int4 on the board. int4 passed 5 case types in the self-test and 3 in the demo; the other four (identity, ones, zeros, random_inrange) passed in simulation only.
-- LED behaviour in the logs (it is covered in `DEMO.md` and to be confirmed visually).
-- Anything beyond one board, one JTAG speed and 12 timed swaps.
+- LED behaviour was confirmed visually on 2026-10-29; it is not recorded in the logs.
+- Anything beyond one board. Swap time was measured at three JTAG clocks on two cables (32 timed swaps).
 
 **T3 (not started)**
 - Convert real-valued data to 16/8/4-bit integers on the host (symmetric quantisation), run it through each precision and **measure the error against int16**.
@@ -409,7 +432,7 @@ This is a demonstrator: it proves the mechanism and the resource trade-off, not 
 
 | Application | How runtime precision swapping helps | What is still needed |
 |---|---|---|
-| **Edge AI inference** (cameras, wearables, drones) | Run int4 or int8 when battery is low or latency matters, int16 when accuracy matters; or pick precision per layer | A larger array, a quantisation toolflow, accuracy and power measurements (T3) |
+| **Edge inference** (neural networks on cameras, wearables, drones) | Run int4 or int8 when battery is low or latency matters, int16 when accuracy matters; or pick precision per layer | A larger array, a quantisation toolflow, accuracy and power measurements (T3) |
 | **Always-on sensing** | A cheap low-precision "wake-up" detector that escalates to a precise module on demand | Autonomous control: the processor, not a laptop, triggering swaps |
 | **Cloud and shared FPGAs** | Several tenants or workloads share one region by swapping accelerators in and out | Fast, secure partial-bitstream loading and isolation guarantees |
 | **Satellites and remote systems** | Update or repair hardware functions in the field without a full restart, and change modes under a tight power budget | Fault handling, verified bitstreams and radiation-aware design |
@@ -417,7 +440,7 @@ This is a demonstrator: it proves the mechanism and the resource trade-off, not 
 | **Automotive and robotics** | Mode-dependent perception pipelines: coarse and fast at speed, precise when parked or docking | Safety certification and deterministic swap latency |
 | **Teaching and research** | A compact platform for studying mixed-precision and approximate computing, with a golden model and full evidence trail | Nothing: it is ready as it is |
 
-**The numbers that decide whether swapping is worthwhile.** A swap takes 0.43 s over JTAG. A 4×4 product takes 150 ns, so one swap is equivalent to about 2.9 million products. Swapping pays off when a precision mode lasts for many calculations, such as a whole network layer, a whole video frame sequence or a battery state, and not when it must change every few microseconds. Faster configuration paths exist (for example through the processor's own configuration port), but they were not used or measured here.
+**The numbers that decide whether swapping is worthwhile.** A swap takes 0.43 s over JTAG at a 15 MHz clock (0.9 to 1.4 s on the slower link of the second session). A 4×4 product takes 150 ns, so one swap is equivalent to about 2.9 million products. Swapping pays off when a precision mode lasts for many calculations, such as a whole network layer, a whole video frame sequence or a battery state, and not when it must change every few microseconds. Faster configuration paths exist (for example through the processor's own configuration port), but they were not used or measured here.
 
 **The core engineering idea carries over directly:** keep a fixed interface, isolate the swappable region with a decoupler, check that every build shares the same static region, and prove each variant against a reference model.
 
@@ -469,8 +492,7 @@ This is a demonstrator: it proves the mechanism and the resource trade-off, not 
 | Demo script and LED legend | `docs/DEMO.md` |
 | T2 build results | `docs/t2/reports/build_summary.csv`, `pr_verify.rpt`, `sim_cycles.csv`, `ooc_summary.csv` |
 | T2 power and delay estimates | `docs/t2/reports/power_delay_summary.csv`, `cfg_*_power.rpt` |
-| T2 board data | `docs/t2/reports/hw_session_20261022.log`, `hw_selftest_20261022_134926.csv`, `hw_demo_20261022_134038.csv` |
+| T2 board data | `docs/t2/reports/hw_session_20261022.log`, `hw_selftest_20261022_134926.csv`, `hw_demo_20261022_134038.csv`; second session: `hw_session_20261029_console.txt`, `hw_session_20261029_notes.md`, `hw_demo_20261029_132829.csv` |
 | Collected bitstreams and checksums | `bitstreams/t2/` (with `manifest.csv`) |
 | Screenshots | `docs/t0/img`, `docs/t1/img`, `docs/t2/img` |
 | Course source package | `submission/README.txt`, `submission/T2_final/`, `submission/earlier_tiers/` |
-| Handoff for the report and slides | `docs/handoff/HANDOFF.md`, `docs/handoff/BRIEFING_PACK.md` |
